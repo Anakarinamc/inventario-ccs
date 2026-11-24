@@ -1,0 +1,1641 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Inventario Caracas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: barra superior fija + pestañas; cada vista es una mesa de trabajo (resumen arriba, tabla abajo). */
+:root{
+  --bg:#F2F4F1; --surface:#FFFFFF; --sunk:#E8ECE8; --ink:#16201C; --muted:#5B6963; --line:#D6DDD8;
+  --accent:#1D6A56; --accent-ink:#FFFFFF; --accent-soft:#DDEDE6;
+  --warn:#9A6212; --warn-soft:#FAEFD9; --crit:#B42318; --crit-soft:#FBE3DF; --ok:#2C7A4B; --ok-soft:#E1F0E6;
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-code:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#161F1C; --sunk:#1D2824; --ink:#E4ECE8; --muted:#93A39C; --line:#2A3631;
+  --accent:#5DC3A4; --accent-ink:#0A1411; --accent-soft:#1B3A31;
+  --warn:#E3AE55; --warn-soft:#3A2E16; --crit:#F2806F; --crit-soft:#3E1F1B; --ok:#70C493; --ok-soft:#1A3326; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#161F1C; --sunk:#1D2824; --ink:#E4ECE8; --muted:#93A39C; --line:#2A3631;
+  --accent:#5DC3A4; --accent-ink:#0A1411; --accent-soft:#1B3A31;
+  --warn:#E3AE55; --warn-soft:#3A2E16; --crit:#F2806F; --crit-soft:#3E1F1B; --ok:#70C493; --ok-soft:#1A3326; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1280px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding-block:12px 0}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{margin:0;font-size:19px;font-weight:800;font-stretch:122%;letter-spacing:.01em;text-transform:uppercase}
+.brand .tag{font-family:var(--f-code);font-size:11px;color:var(--muted);border:1px solid var(--line);padding:1px 6px;border-radius:4px}
+.sync{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.ok{background:var(--ok)} .dot.busy{background:var(--warn);animation:pulse 1s infinite} .dot.err{background:var(--crit)}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.dot.busy{animation:none}}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;width:100%;scrollbar-width:none;margin-top:4px}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{appearance:none;border:0;background:none;color:var(--muted);font:600 13.5px var(--f-ui);padding:10px 12px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;display:flex;gap:6px;align-items:center}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:hover{color:var(--ink)}
+.badge{font:600 11px var(--f-code);background:var(--sunk);color:var(--muted);border-radius:10px;padding:0 6px;min-width:18px;text-align:center}
+.badge.hot{background:var(--crit-soft);color:var(--crit)}
+main{padding-block:20px 60px}
+section.view{display:flex;flex-direction:column;gap:18px}
+h2{margin:0;font-size:22px;font-weight:800;font-stretch:115%;text-wrap:balance}
+h3{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+p{margin:0} .lead{color:var(--muted);max-width:68ch}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.spacer{flex:1}
+.grid-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .lbl{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.kpi .num{font-size:28px;font-weight:800;font-stretch:112%;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .sub{font-size:12.5px;color:var(--muted)}
+.kpi.crit .num{color:var(--crit)} .kpi.warn .num{color:var(--warn)}
+button.kpi{text-align:left;cursor:pointer;font:inherit;color:inherit}
+button.kpi:hover{border-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 13px var(--f-ui);padding:8px 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.pri:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--crit)}
+.btn.sm{padding:4px 8px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+input[type=number]{font-variant-numeric:tabular-nums}
+.search{flex:1 1 220px;max-width:420px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:600 12.5px var(--f-ui);padding:5px 10px;border-radius:20px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+.nowrap{white-space:nowrap}
+th .sku{text-transform:none;letter-spacing:0;font-weight:500}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--sunk);position:sticky;top:0;white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer} tbody tr.click:hover td{background:var(--sunk)}
+.sku{font-family:var(--f-code);font-size:11.5px;color:var(--muted)}
+.pname{font-weight:600}
+.neg{color:var(--crit);font-weight:700}
+.muted{color:var(--muted)}
+.pill{display:inline-block;font:700 11px var(--f-ui);text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.p-urgente,.p-agotado,.p-revisar{background:var(--crit-soft);color:var(--crit)}
+.p-comprar{background:var(--warn-soft);color:var(--warn)}
+.p-ok{background:var(--ok-soft);color:var(--ok)}
+.p-sinconteo{background:var(--sunk);color:var(--ink);outline:1px dashed var(--muted)}
+.p-sinventas,.p-nodata{background:var(--sunk);color:var(--muted)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty strong{color:var(--ink);font-size:15px}
+.note{font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:6px;padding:8px 12px}
+.alert{border-radius:var(--r);padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.alert.err{background:var(--crit-soft);color:var(--crit)}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert p{flex:1 1 260px;color:inherit}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:minmax(90px,140px) 1fr auto;gap:10px;align-items:center;font-size:13px}
+.bar .track{height:10px;background:var(--sunk);border-radius:5px;overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:5px}
+.bar .v{font-variant-numeric:tabular-nums;font-weight:700;min-width:48px;text-align:right}
+.picker{position:relative;flex:1 1 260px;max-width:480px}
+.picker input{width:100%}
+.picker .res{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:6px;z-index:4;max-height:300px;overflow:auto;box-shadow:0 8px 24px rgb(0 0 0 / .12)}
+.picker .res button{display:flex;width:100%;text-align:left;gap:8px;align-items:baseline;border:0;background:none;color:var(--ink);padding:8px 10px;font:inherit;cursor:pointer;border-bottom:1px solid var(--line)}
+.picker .res button:hover,.picker .res button:focus{background:var(--sunk)}
+.qty{width:90px;text-align:right}
+.cost{width:96px;text-align:right}
+.more{align-self:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-weight:600;z-index:20;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgb(0 0 0 / .2)}
+.toast.err{background:var(--crit);color:#fff}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0;width:min(760px,calc(100% - 32px));max-height:85vh;overflow:auto}
+dialog::backdrop{background:rgb(0 0 0 / .45)}
+.dlg{padding:18px;display:flex;flex-direction:column;gap:14px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.fact{background:var(--sunk);border-radius:6px;padding:8px 10px}
+.fact b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.fact span{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+textarea{width:100%;min-height:140px;font-family:var(--f-code);font-size:12.5px}
+.locked{max-width:520px;margin:60px auto;text-align:center;display:flex;flex-direction:column;gap:12px}
+details summary{cursor:pointer;font-weight:600}
+.confirm{display:inline-flex;gap:6px;align-items:center;font-size:12.5px}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Inventario Caracas</h1><span class="tag">VE · privado</span></div>
+    <div class="sync"><span class="dot" id="syncDot"></span><span id="syncTxt">Conectando…</span>
+      <button class="btn sm" id="btnRefresh" type="button">Actualizar ventas</button></div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-v="resumen" aria-selected="true">Resumen</button>
+      <button role="tab" data-v="comprar">Qué comprar <span class="badge" id="bComprar">0</span></button>
+      <button role="tab" data-v="inventario">Inventario</button>
+      <button role="tab" data-v="conteo">Conteos</button>
+      <button role="tab" data-v="cuadre">Cuadre <span class="badge" id="bCuadre">0</span></button>
+      <button role="tab" data-v="compras">Entradas y salidas</button>
+      <button role="tab" data-v="costos">Costos <span class="badge" id="bCostos">0</span></button>
+      <button role="tab" data-v="vincular">Vincular nombres <span class="badge" id="bVinc">0</span></button>
+      <button role="tab" data-v="reglas">Reglas</button>
+      <button role="tab" data-v="ajustes">Ajustes</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div id="globalAlert"></div>
+
+  <!-- RESUMEN -->
+  <section class="view" data-view="resumen">
+    <div id="setupBox"></div>
+    <div class="grid-kpi">
+      <div class="kpi"><span class="lbl">Mercancía a costo</span><span class="num" id="kValor">—</span><span class="sub" id="kValorSub">Pon los costos para ver el valor</span></div>
+      <button class="kpi crit" type="button" data-go="comprar" data-filter="urgente"><span class="lbl">Comprar urgente</span><span class="num" id="kUrg">—</span><span class="sub" id="kUrgSub">Se acaban antes de que llegue el pedido</span></button>
+      <button class="kpi warn" type="button" data-go="comprar" data-filter="comprar"><span class="lbl">Por comprar</span><span class="num" id="kCom">—</span><span class="sub">No cubren el tiempo de entrega + cobertura</span></button>
+      <button class="kpi" type="button" data-go="inventario" data-filter="sinconteo"><span class="lbl">Se venden sin conteo</span><span class="num" id="kSin">—</span><span class="sub">Cuenta estos primero</span></button>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="row"><h3>Lo más urgente</h3><span class="spacer"></span><button class="btn sm" type="button" data-go="comprar">Ver lista completa</button></div>
+        <div id="topBuy"></div>
+      </div>
+      <div class="panel">
+        <div class="row"><h3 id="hTiendas">Unidades despachadas por tienda</h3></div>
+        <div class="bars" id="tiendaBars"></div>
+        <p class="note">Cuenta ENTREGADO y MRW O ZOOM de tu hoja de Ventas, y las ventas al mayor de MERCANCIA - NUEVO. Cada tienda por separado.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUÉ COMPRAR -->
+  <section class="view" data-view="comprar" hidden>
+    <div class="row"><h2>Qué comprar</h2><span class="spacer"></span>
+      <button class="btn" type="button" id="btnCopyBuy">Copiar lista</button></div>
+    <p class="lead" id="buyLead"></p>
+    <div class="row">
+      <input class="search" id="qBuy" type="search" placeholder="Buscar producto o código" aria-label="Buscar producto">
+      <div class="chips" id="chipsBuy">
+        <button class="chip" type="button" data-f="pedir" aria-pressed="true">Urgente + por comprar</button>
+        <button class="chip" type="button" data-f="urgente" aria-pressed="false">Solo urgente</button>
+        <button class="chip" type="button" data-f="todos" aria-pressed="false">Todo lo que se vende</button>
+        <button class="chip" type="button" data-f="sinconteo" aria-pressed="false">Sin conteo</button>
+      </div>
+      <select id="tiendaBuy" aria-label="Filtrar por tienda"><option value="">Todas las tiendas</option></select>
+    </div>
+    <div id="buyTable"></div>
+  </section>
+
+  <!-- INVENTARIO -->
+  <section class="view" data-view="inventario" hidden>
+    <div class="row"><h2>Inventario</h2></div>
+    <p class="lead">Cada producto contado muestra su <b>cuadre con tus Excel</b>: lo que había el 01/01/2026 + todo lo que entró − todo lo que salió hasta el día del conteo, comparado con lo contado. <b>Stock hoy</b> = lo contado + entradas − salidas desde el día siguiente al conteo. Sin conteo se ve "≈", un estimado. Reservado = pedidos PENDIENTE o PARA OTRO DÍA. Toca un producto para ver cada movimiento.</p>
+    <div class="row">
+      <input class="search" id="qInv" type="search" placeholder="Buscar producto o código" aria-label="Buscar producto">
+      <div class="chips" id="chipsInv">
+        <button class="chip" type="button" data-f="todos" aria-pressed="true">Todos</button>
+        <button class="chip" type="button" data-f="constock" aria-pressed="false">Con stock</button>
+        <button class="chip" type="button" data-f="negativo" aria-pressed="false">Negativos</button>
+        <button class="chip" type="button" data-f="sinconteo" aria-pressed="false">Se venden sin conteo</button>
+        <button class="chip" type="button" data-f="viejo" aria-pressed="false">Conteo de hace más de 30 días</button>
+      </div>
+      <select id="ubicInv" aria-label="Filtrar por ubicación"><option value="">Todas las ubicaciones</option></select>
+    </div>
+    <div id="invTable"></div>
+  </section>
+
+  <!-- CONTEOS -->
+  <section class="view" data-view="conteo" hidden>
+    <div class="row"><h2>Conteos</h2></div>
+    <p class="lead">Anota lo que contaste físicamente, el día y dónde está. Si un producto está en varios lugares, se suma lo contado en cada ubicación; un conteo nuevo en la misma ubicación reemplaza al anterior de esa ubicación. El conteo vale para ese día: las salidas se restan desde el día siguiente. Si ya no queda nada de un producto, cuéntalo en 0.</p>
+    <div class="panel">
+      <div class="row">
+        <label class="f">Fecha del conteo<input type="date" id="cFecha"></label>
+        <label class="f" style="flex:1 1 180px">Ubicación (opcional)<input type="text" id="cUbic" placeholder="Ej. Hilera 3" list="dlUbic"></label>
+        <label class="f" style="flex:1 1 150px">Quién contó<input type="text" id="cResp" placeholder="Ej. Yonaiker" list="dlResp"></label>
+        <label class="f" style="flex:1 1 200px">Nota (opcional)<input type="text" id="cNota" placeholder="Ej. conteo general almacén"></label>
+      </div>
+      <div class="row">
+        <div class="picker" id="cPicker"><input type="search" id="cSearch" placeholder="Busca un producto para agregarlo" aria-label="Buscar producto para el conteo" autocomplete="off"><div class="res" hidden></div></div>
+        <button class="btn" type="button" id="cPasteToggle">Pegar desde Excel</button>
+      </div>
+      <div id="cPasteBox" hidden>
+        <p class="note">Pega dos columnas desde Excel: código o nombre del producto, y cantidad. Una fila por producto.</p>
+        <textarea id="cPaste" placeholder="A022-XS/S-NEGRO	12&#10;CARILLAS DENTALES	240"></textarea>
+        <div class="row"><button class="btn" type="button" id="cPasteGo">Agregar al conteo</button><span class="muted" id="cPasteMsg"></span></div>
+      </div>
+      <div id="cItems"></div>
+      <div class="row"><span class="spacer"></span><button class="btn pri" type="button" id="cSave" disabled>Guardar conteo</button></div>
+    </div>
+    <div class="panel">
+      <h3>Preparar una lista para contar</h3>
+      <p class="muted">Elige qué contar. Puedes copiar la lista para mandarla por WhatsApp a quien va a contar, o pasarla directo al conteo de arriba.</p>
+      <div class="row"><select id="cListU" aria-label="Qué contar" style="flex:1 1 240px"></select>
+        <button class="btn" type="button" id="cListCopy">Copiar lista</button><button class="btn" type="button" id="cListAdd">Pasar al conteo</button></div>
+      <p class="muted" id="cListMsg"></p>
+    </div>
+    <div class="panel"><h3>Historial de conteos</h3><div id="cHist"></div></div>
+    <datalist id="dlUbic"></datalist><datalist id="dlResp"></datalist>
+  </section>
+
+  <!-- CUADRE -->
+  <section class="view" data-view="cuadre" hidden>
+    <div class="row"><h2>Cuadre</h2></div>
+    <p class="lead">Para cada producto contado: todo lo que entró menos todo lo que salió, hasta el día del conteo, comparado con lo que contaste. Si da igual, las entradas y salidas anotadas cuadran. Cuando un producto se acaba, cuéntalo en 0 y aquí ves cuánto faltó o sobró.</p>
+    <div id="cuaInfo"></div>
+    <div class="row">
+      <input class="search" id="qCua" type="search" placeholder="Buscar producto o código" aria-label="Buscar producto">
+      <div class="chips" id="chipsCua">
+        <button class="chip" type="button" data-f="todos" aria-pressed="true">Todos los contados</button>
+        <button class="chip" type="button" data-f="cero" aria-pressed="false">Agotados (conteo 0)</button>
+        <button class="chip" type="button" data-f="nocuadra" aria-pressed="false">No cuadran</button>
+        <button class="chip" type="button" data-f="faltan" aria-pressed="false">Faltan</button>
+        <button class="chip" type="button" data-f="sobran" aria-pressed="false">Sobran</button>
+        <button class="chip" type="button" data-f="sinentrada" aria-pressed="false">Sin entrada anotada</button>
+        <button class="chip" type="button" data-f="completa" aria-pressed="false">Con historia completa</button>
+      </div>
+      <label class="f">Punto de partida<select id="cuaMode"><option value="ini26">Conteo del 01/01/2026 (recomendado)</option><option value="ini25">Conteo de 2025 (jun–sep 2025)</option><option value="cero">Desde cero: todo desde 2025</option></select></label>
+    </div>
+    <div id="cuaTable"></div>
+  </section>
+
+  <!-- ENTRADAS -->
+  <section class="view" data-view="compras" hidden>
+    <div class="row"><h2>Entradas y salidas</h2></div>
+    <p class="lead">Registra la mercancía que entra o sale del almacén sin ser una venta: lo que llega de proveedores, los envíos al fulfillment de DroPanas, mermas o daños. Si tu equipo ya anota los ingresos en Ingresos/Egresos del Excel, no los repitas aquí.</p>
+    <div class="panel">
+      <div class="row">
+        <label class="f">Tipo<select id="eTipo"><option value="entrada">Entrada de mercancía</option><option value="dropanas">Envío a DroPanas (fulfillment)</option><option value="merma">Merma o daño</option><option value="otra">Otra salida</option></select></label>
+        <label class="f">Fecha<input type="date" id="eFecha"></label>
+        <label class="f" style="flex:1 1 200px" id="eProvL">Proveedor / origen<input type="text" id="eProv" placeholder="Ej. importación China"></label>
+        <label class="f" style="flex:1 1 200px">Nota<input type="text" id="eNota"></label>
+      </div>
+      <div class="row"><div class="picker" id="ePicker"><input type="search" id="eSearch" placeholder="Busca un producto para agregarlo" aria-label="Buscar producto" autocomplete="off"><div class="res" hidden></div></div><button class="btn" type="button" id="ePasteToggle">Pegar desde Excel</button></div>
+      <div id="ePasteBox" hidden>
+        <p class="note">Pega dos columnas desde Excel: código o nombre del producto, y cantidad. Una fila por producto.</p>
+        <textarea id="ePaste" placeholder="CARILLAS DENTALES	50&#10;A022-XS/S-NEGRO	12"></textarea>
+        <div class="row"><button class="btn" type="button" id="ePasteGo">Agregar</button><span class="muted" id="ePasteMsg"></span></div>
+      </div>
+      <div id="eItems"></div>
+      <div class="row"><label class="row" style="gap:6px;font-size:13px" id="eUpdCostL"><input type="checkbox" id="eUpdCost" checked> Guardar este costo como "Tu costo" de los productos</label><span class="spacer"></span><button class="btn pri" type="button" id="eSave" disabled>Guardar</button></div>
+    </div>
+    <div class="panel"><h3>Registradas en la app</h3><div id="eHist"></div></div>
+  </section>
+
+  <!-- COSTOS -->
+  <section class="view" data-view="costos" hidden>
+    <div class="row"><h2>Costos</h2></div>
+    <p class="lead">Los costos salen solos del glosario de finanzas (PANEL CIERRES, pestaña COSTOS GLOSARIO). Si un producto no está, o quieres otro costo, escríbelo en "Tu costo": manda sobre el glosario. Se guarda al salir de la casilla. Lo mejor es agregar los que faltan en el glosario, así sirven también para tus cierres.</p>
+    <div class="row">
+      <input class="search" id="qCost" type="search" placeholder="Buscar producto o código" aria-label="Buscar producto">
+      <div class="chips" id="chipsCost">
+        <button class="chip" type="button" data-f="importa" aria-pressed="true">Con stock o ventas, sin costo</button>
+        <button class="chip" type="button" data-f="sincosto" aria-pressed="false">Todos sin costo</button>
+        <button class="chip" type="button" data-f="todos" aria-pressed="false">Todos</button>
+      </div>
+    </div>
+    <div id="costTable"></div>
+  </section>
+
+  <!-- VINCULAR -->
+  <section class="view" data-view="vincular" hidden>
+    <div class="row"><h2>Vincular nombres</h2></div>
+    <p class="lead">Estas ventas tienen un nombre de producto que no existe en el catálogo, así que todavía no descuentan stock. Elige a qué producto corresponde cada nombre (queda guardado para siempre) o márcalo como "no es producto".</p>
+    <datalist id="dlProd"></datalist>
+    <div id="vincTable"></div>
+    <details class="panel"><summary>Nombres ya vinculados</summary><div id="aliasList"></div></details>
+  </section>
+
+  <!-- REGLAS -->
+  <section class="view" data-view="reglas" hidden>
+    <div class="row"><h2>Reglas del inventario</h2></div>
+    <p class="lead">Cómo calcula la app, qué hojas usa y qué decisiones tomé donde tus Excel no lo dicen. Si algo no es así, dímelo y lo cambio.</p>
+    <div class="panel">
+      <h3>Conteos</h3>
+      <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+        <li>Un conteo vale para el día en que se hizo. Las salidas se restan <b>desde el día siguiente</b>, porque no sabemos a qué hora se contó.</li>
+        <li>No hace falta contar a puerta cerrada. El único riesgo es lo que se despacha el mismo día del conteo: lo mejor es contar al final del día.</li>
+        <li>"Ya no hay más de X" se guarda como conteo en 0, y en Cuadre se ve cuánto faltó o sobró.</li>
+        <li>Cada conteo guarda quién contó y dónde (hilera, columna, cesta). La ubicación se puede cambiar cuando quieras.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Qué suma y qué resta</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Movimiento</th><th>Efecto</th></tr></thead><tbody>
+        <tr><td>Ventas despacho Caracas: ENTREGADO y MRW O ZOOM</td><td>Resta</td></tr>
+        <tr><td>Ventas PENDIENTE y PARA OTRO DÍA</td><td>No resta todavía: queda como <b>reservado</b> hasta que se entregue</td></tr>
+        <tr><td>CANCELADO y NO ENTREGADO</td><td>No cuenta</td></tr>
+        <tr><td>Ventas al mayor (Jorge, Andrea, Teatros, Valera…)</td><td>Resta. Si la cantidad es negativa es una devolución y vuelve al stock</td></tr>
+        <tr><td>Cambios: lo que se entrega</td><td>Resta si el cambio se entregó</td></tr>
+        <tr><td>Cambios: lo que se retira</td><td>Vuelve al stock si el cambio se entregó y no tiene avería</td></tr>
+        <tr><td>INGRESO en Ingresos/Egresos (China, Colombia, compras locales, desde DroPanas o Maracaibo)</td><td>Suma</td></tr>
+        <tr><td>EGRESO en Ingresos/Egresos (envíos a DroPanas y a Maracaibo)</td><td>Resta</td></tr>
+        <tr><td>Entradas y salidas registradas en esta app</td><td>Suman o restan según el tipo</td></tr>
+        <tr><td>COMANDAS INTERIOR CE</td><td>No cuenta: esa mercancía ya salió como envío a DroPanas</td></tr>
+        <tr><td>Ventas de Maracaibo</td><td>No cuenta: ya salió como envío a Maracaibo</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="panel">
+      <h3>Decisiones que tomé (de las 8 dudas del informe)</h3>
+      <ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+        <li><b>Punto de partida del cuadre:</b> el conteo del 01/01/2026 de tu Excel de inventario 2026, porque es el mismo día para todos los productos. En Cuadre puedes cambiarlo a "conteo de 2025" o "desde cero".</li>
+        <li><b>Ventas del 11/02 al 31/03/2025:</b> no están en ningún Excel. Por eso "desde cero" solo es confiable en productos con <b>historia completa</b>, o sea los que llegaron por primera vez después del 23/04/2025. La app los marca.</li>
+        <li><b>PENDIENTE:</b> no se resta hasta que se entrega. Mientras tanto se ve como reservado.</li>
+        <li><b>Valencia y Barquisimeto (VENTAS VAL - BARQUI):</b> restan cuando están ENTREGADO, porque salen del almacén de Caracas y las devoluciones vuelven a Caracas (me lo confirmaste el 24/11/2026).</li>
+        <li><b>Maracaibo:</b> restan los envíos anotados como EGRESO. El al mayor "MARACAIBO" de febrero 2025 también resta, porque es de antes de que existiera Ingresos/Egresos, así que no se repite.</li>
+        <li><b>DroPanas:</b> se usan las filas DROPANAS de Ingresos/Egresos (EGRESO resta, INGRESO suma). El envío del 28/10/2026 (Magnesio 100 y Soil 50) está anotado en la app porque no estaba en tu Excel. Si después lo anotan allá, la app avisa que puede estar repetido.</li>
+        <li><b>Pruebas de Leo</b> (Ajuste de Inventario, −532 y −246): no se usan.</li>
+        <li><b>Al mayor con cantidad negativa:</b> es una devolución y vuelve al stock.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>Copias que no se suman</h3>
+      <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+        <li>"DICIEMBRE - HOJA DE VENTAS" de los despachos 2025 y 2026 (es diciembre 2024).</li>
+        <li>"MERCANCÍA" del despacho 2026 (es el al mayor de jul–sep 2025).</li>
+        <li>MERCANCÍA 2025 se usa hasta el 05/09/2025 y MERCANCIA - NUEVO desde el 06/09/2025: los días 6 a 8 de septiembre estaban anotados en las dos.</li>
+        <li>Ingresos/Egresos 2025 se usa solo hasta el 31/12/2025. Sus filas de enero y febrero 2026 ya están en el de 2026.</li>
+        <li>Ventas de enero a junio 2026: se usa la copia de tu Excel de inventario 2026. Si una venta aparece también en el despacho actual (mismo pedido, producto, fecha y cantidad), se cuenta una sola vez.</li>
+        <li>Fechas mal escritas como "22/01/0202" o "20/022025" se leen con el año de su hoja.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Por confirmar contigo</h3>
+      <p class="muted">Lo usé así para cargar los conteos de Yonaiker. Si alguno está mal, se corrige y la app recalcula sola.</p>
+      <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+        <li>Linterna con martillo = Linterna 4 en 1</li>
+        <li>Sérum anticaída Disaar = Serum anticaída</li>
+        <li>Super calming = Supercalm sobres</li>
+        <li>Gel de masajes = Gel masajeador relajante</li>
+        <li>Bee venom = Cremas para articulaciones</li>
+        <li>Cremas de cuello = Firming lifting de cuello</li>
+        <li>Aged garlic = Cápsulas de ajo</li>
+        <li>Donut glazed = Exfoliantes Truly</li>
+        <li>Combitos = Combo Truly (no el grande)</li>
+        <li>Base "eran" = Base Warm</li>
+        <li>Milk thistle: 94 + 36 = 130</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Hojas leídas</h3>
+      <p class="muted">Solo lee, nunca modifica tus Excel.</p>
+      <div id="rgSrc"></div>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="view" data-view="ajustes" hidden>
+    <div class="row"><h2>Ajustes</h2></div>
+    <div class="panel">
+      <h3>Cálculo de compras</h3>
+      <div class="row">
+        <label class="f">Días de ventas a mirar<input type="number" id="sDV" min="7" max="120" class="qty"></label>
+        <label class="f">Días que tarda en llegar un pedido<input type="number" id="sDE" min="0" max="180" class="qty"></label>
+        <label class="f">Días de stock que quieres tener<input type="number" id="sDC" min="0" max="180" class="qty"></label>
+      </div>
+      <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" id="sMayor"> Usar las ventas al mayor para calcular qué comprar (siempre se descuentan del stock)</label>
+      <p class="note">Cantidad a comprar = venta diaria × (días de llegada + días de stock) − stock disponible.</p>
+      <div class="row"><button class="btn pri" type="button" id="sSave">Guardar ajustes</button></div>
+    </div>
+    <div class="panel">
+      <h3>Catálogo de productos</h3>
+      <p class="muted" id="catInfo"></p>
+      <p class="note">El catálogo se trae de la pestaña "Stock de Productos" del archivo INVENTARIO DESPACHO CARACAS - 2026. Cuando tu equipo agregue productos nuevos allí, toca actualizar. No borra tus conteos, entradas ni costos. Los productos contados que no están en esa hoja se guardan aparte en la app (sin código) y no se pierden al actualizar.</p>
+      <div class="row"><button class="btn" type="button" id="btnCat">Actualizar catálogo</button><span class="muted" id="catMsg"></span></div>
+    </div>
+    <div class="panel">
+      <h3>De dónde lee la app</h3>
+      <p class="muted">Solo lee, nunca modifica tus hojas.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Hoja</th><th>Qué hace en el stock</th></tr></thead><tbody>
+        <tr><td>DESPACHO CARACAS - 2026 · Ventas</td><td>ENTREGADO y MRW O ZOOM restan. PENDIENTE y PARA OTRO DÍA quedan reservados. CANCELADO y NO ENTREGADO no cuentan.</td></tr>
+        <tr><td>DESPACHO CARACAS - 2026 · MERCANCIA - NUEVO</td><td>Ventas al mayor (Jorge, Andrea, Teatros…): restan siempre. Aparecen como la tienda AL MAYOR.</td></tr>
+        <tr><td>DESPACHO CARACAS - 2026 · CAMBIOS Y REEMBOLSOS</td><td>"Se entrega" resta. "Se retira" vuelve al stock si el cambio se entregó y no tiene avería.</td></tr>
+        <tr><td>No se usan</td><td>COMANDAS INTERIOR CE (son ventas de DroPanas, que salen de su fulfillment: ya restan cuando se les envía la mercancía), ventas de Maracaibo (ya restan como envío a Maracaibo), Productos Adicionales de Ventas (son para probar tallas) y Ajuste de Inventario.</td></tr>
+        <tr><td>INVENTARIO DESPACHO CARACAS - 2026 · Ingresos/Egresos</td><td>INGRESO suma y EGRESO resta: lo que tu equipo ya anota ahí cuenta solo. Los envíos a DroPanas y a Maracaibo se ven por separado en el cuadre.</td></tr>
+        <tr><td>INVENTARIO DESPACHO CARACAS - 2026 · Ventas Ene-Jun, CyR Ene-Jun, Mercancia Ene-Jun</td><td>Lo mismo que Ventas, Cambios y Al mayor, para enero a junio de 2026. Se usan en el cuadre.</td></tr>
+        <tr><td>INVENTARIO DESPACHO CARACAS - 2026 · Stock de Productos</td><td>Catálogo y "Stock Inicial" del 01/01/2026 (punto de partida del cuadre).</td></tr>
+        <tr><td>2025 (solo para el cuadre y el historial)</td><td>NEW DESPACHO CARACAS: Ventas, Cambios, MERCANCÍA (hasta 05/09/2025) y MERCANCIA - NUEVO (desde 06/09/2025). INVENTARIO DESPACHO CARACAS 2025: Ingresos/Egresos hasta el 31/12/2025 y su Stock Inicial de 2025.</td></tr>
+        <tr><td>PANEL CIERRES · COSTOS GLOSARIO</td><td>Costo de cada producto.</td></tr>
+        <tr><td>Esta app · Conteos y Entradas</td><td>Conteo físico con fecha (punto de partida) y mercancía que registres aquí.</td></tr>
+      </tbody></table></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+const SRC = {
+  ventas: { id: "17UdVr7xGJLKiAAOSDJxy7ywQFObH-GKNRi8na4sjSMw", sheet: "Ventas", valbar: "VENTAS VAL - BARQUI", merc: "MERCANCIA - NUEVO", cyr: "CAMBIOS Y REEMBOLSOS" },
+  inv: { id: "1j42sRv9_TJrX7di4Wy0PX6mMuQ_FgNi86wVb-_I4-_Q", sheet: "Stock de Productos", variantes: "Productos con Variantes", ie: "Ingresos/Egresos", ventasEJ: "Ventas Ene-Jun", cyrEJ: "CyR Ene-Jun", mercEJ: "Mercancia Ene-Jun" },
+  fin: { id: "133d0IDZqfeJLlFNL2bshxDMlw6ncwjKHs-y1IPZa-rc", sheet: "COSTOS GLOSARIO" },
+  y25: { ventas: "1f2kNn_bnfhD_ezUCbeqWFxq97OJycB0yDqV_FNk-WOM", inv: "15IX-jFp6pWxfOUCrwYU-_W80MQfVUwtMnei8AslN7RM" }
+};
+/* Cortes para no contar dos veces lo que está copiado en dos hojas */
+const CUT = { fin25: "2025-12-31", mayorViejoHasta: "2025-09-05", mayorNuevoDesde: "2025-09-06", entradas25: "2025-04-23" };
+const MAYOR = "AL MAYOR";
+const TIPOS = { entrada: "Entrada de mercancía", dropanas: "Envío a DroPanas (fulfillment)", merma: "Merma o daño", otra: "Otra salida" };
+const isSalidaTipo = t => !!t && t !== "entrada";
+const KIND_LABEL = { venta: "Venta", mayor: "Venta al mayor", csale: "Cambio: sale", cvuelve: "Cambio: vuelve", ingreso: "Ingreso (Excel)", egreso: "Egreso (Excel)" };
+const SRC_LABEL = { venta: "Ventas", mayor: "Al mayor", csale: "Cambios", cvuelve: "Cambios", ingreso: "Ingresos/Egresos", egreso: "Ingresos/Egresos" };
+const SERVER = "Google Sheets";
+const SALIDA = new Set(["ENTREGADO","MRW O ZOOM"]);
+const RESERVA = new Set(["PENDIENTE","PARA OTRO DIA",""]);
+const IGN = "__IGNORAR__";
+const DEF_CFG = { diasVentas: 28, diasEntrega: 15, diasCobertura: 30, mayorEnCompras: true, usarInicial: true };
+const PAGE = 100;
+
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => Array.from(el.querySelectorAll(s));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().replace(/\s+/g," ").trim();
+const encKey = s => String(s).replace(/[^A-Za-z0-9_\-]/g, c => "~" + c.codePointAt(0).toString(16) + "~");
+const num = v => { if (v === null || v === undefined || v === "") return NaN; const n = parseFloat(String(v).replace(/[$\s]/g,"").replace(",", ".")); return n; };
+const fmtN = (n, d=0) => (n === null || n === undefined || !isFinite(n)) ? "—" : n.toLocaleString("es-VE", {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtUSD = n => (n === null || !isFinite(n)) ? "—" : "$" + n.toLocaleString("es-VE", {minimumFractionDigits:2, maximumFractionDigits:2});
+const pad = n => String(n).padStart(2,"0");
+const isoOf = dt => dt.getFullYear() + "-" + pad(dt.getMonth()+1) + "-" + pad(dt.getDate());
+const today = () => isoOf(new Date());
+const addDays = (iso, n) => { const [y,m,d] = iso.split("-").map(Number); const dt = new Date(y, m-1, d); dt.setDate(dt.getDate()+n); return isoOf(dt); };
+const fmtD = iso => { if (!iso) return "—"; const [y,m,d] = iso.split("-"); return d + "/" + m + "/" + y; };
+function parseDMY(s, fy){
+  s = String(s ?? "").trim(); if (!s) return null;
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/) || s.match(/^(\d{1,2})[\/\-.](\d{2})(\d{4})$/);
+  if (m){ let y = +m[3]; if (y < 100) y += 2000; else if (y < 1000) y = fy || 2000 + (y % 100); /* "0202" = año mal escrito */
+    const mo = +m[2], d = +m[1]; if (mo < 1 || mo > 12 || d < 1 || d > 31) return null; return y + "-" + pad(mo) + "-" + pad(d); }
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+  return null;
+}
+function dayDiff(a, b){ const f = s => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); }; return Math.round((f(a) - f(b)) / 86400000); }
+function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function lsGet(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : v; } catch(e){ return d; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+
+/* ---------- state ---------- */
+const S = {
+  db: null, mcp: null,
+  catalog: [], byKey: new Map(), byNorm: new Map(), catMeta: null,
+  costs: {}, alias: {}, ubic: {}, extras: {}, catChunks: null, catMetaRaw: null, inicial: null, glos: null, glosErr: null, glosCost: new Map(), cfg: {...DEF_CFG}, estadoExists: {},
+  conteos: [], compras: [],
+  sales: null, salesInfo: null, salesErr: null, loadingSales: false,
+  calc: new Map(), stores: [], unmatched: [],
+  view: lsGet("inv.view","resumen"),
+  f: { buy: "pedir", buyT: "", inv: "todos", invU: "", cost: "importa", cua: "todos" },
+  lim: { buy: PAGE, inv: PAGE, cost: PAGE, cua: PAGE },
+  draftC: new Map(), draftE: new Map(),
+  ready: { catalogo:false, estado:false, conteos:false, compras:false }
+};
+
+/* ---------- UI helpers ---------- */
+let toastT;
+function toast(msg, err){ const t = $("#toast"); t.textContent = msg; t.className = "toast" + (err ? " err" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, err ? 6000 : 2600); }
+function setSync(state, txt){ $("#syncDot").className = "dot " + state; $("#syncTxt").textContent = txt; }
+
+function showView(v){
+  if (!$('section.view[data-view="'+v+'"]')) v = "resumen";
+  S.view = v; lsSet("inv.view", v);
+  $$("section.view").forEach(s => s.hidden = s.dataset.view !== v);
+  $$("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.v === v)));
+  render();
+}
+$("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (b) showView(b.dataset.v); });
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-go]"); if (!g) return;
+  const v = g.dataset.go, f = g.dataset.filter;
+  if (v === "comprar" && f){ S.f.buy = f === "comprar" ? "pedir" : f; syncChips("#chipsBuy", S.f.buy); }
+  if (v === "inventario" && f){ S.f.inv = f; syncChips("#chipsInv", f); }
+  showView(v);
+});
+function syncChips(sel, val){ $$(sel + " .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.f === val))); }
+function bindChips(sel, key){ $(sel).addEventListener("click", e => { const c = e.target.closest(".chip"); if (!c) return; S.f[key] = c.dataset.f; S.lim[key] = PAGE; syncChips(sel, c.dataset.f); render(); }); }
+bindChips("#chipsBuy","buy"); bindChips("#chipsInv","inv"); bindChips("#chipsCost","cost"); bindChips("#chipsCua","cua");
+["qBuy","qInv","qCost","qCua"].forEach(id => { let t; $("#"+id).addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { S.lim = {buy:PAGE,inv:PAGE,cost:PAGE,cua:PAGE}; render(); }, 150); }); });
+$("#ubicInv").addEventListener("change", e => { S.f.invU = e.target.value; S.lim.inv = PAGE; render(); });
+$("#tiendaBuy").addEventListener("change", e => { S.f.buyT = e.target.value; render(); });
+
+/* ---------- writes (one at a time per document) ---------- */
+const queues = {};
+function enqueue(path, fn){ const p = (queues[path] || Promise.resolve()).then(fn); queues[path] = p.catch(() => {}); return p; }
+function dbErrMsg(e){
+  const c = e && e.code;
+  if (c === "quota_exceeded") return "Se llenó el espacio de la app. Borra conteos o entradas viejas.";
+  if (c === "invalid_argument") return "No se pudo guardar: solo la dueña de la app puede guardar cambios.";
+  if (c === "revoked") return "Se perdió el acceso. Recarga la página.";
+  if (c === "resource_exhausted") return "Demasiados cambios seguidos. Espera unos segundos y vuelve a intentar.";
+  return "No se pudo guardar. Revisa tu conexión y vuelve a intentar.";
+}
+function mergeEstado(name, partial){
+  return enqueue("estado/" + name, async () => {
+    const ref = S.db.doc("estado/" + name);
+    let exists = S.estadoExists[name];
+    if (!exists){ const sn = await ref.get(); exists = sn.exists; }
+    if (exists) await ref.update({ map: partial }); else await ref.set({ map: partial });
+    S.estadoExists[name] = true;
+  });
+}
+
+/* ---------- Google Sheets ---------- */
+async function getValues(spreadsheetId, range, fresh){
+  const opts = { cache: fresh ? { staleTime: 0, gcTime: 600000, refresh: true } : { staleTime: 120000, gcTime: 600000 } };
+  let r;
+  try { r = await S.mcp.callTool(SERVER, "get_values", { spreadsheetId, range }, opts); }
+  catch(e){
+    if (e && e.retryable){ await new Promise(res => setTimeout(res, Math.min(e.retryAfterMs || 1500, 8000) + Math.random()*800)); r = await S.mcp.callTool(SERVER, "get_values", { spreadsheetId, range }, opts); }
+    else throw e;
+  }
+  let p = r && r.payload;
+  if (typeof p === "string"){ try { p = JSON.parse(p); } catch(e){} }
+  if (p && Array.isArray(p.values)) return p.values;
+  if (p && p.range !== undefined) return [];
+  throw { code: "tool_error", message: "Respuesta inesperada de Google Sheets" };
+}
+function mcpErrText(e){
+  const c = e && e.code;
+  if (c === "server_not_connected" || c === "server_not_found") return { t: "Google Sheets no está conectado a tu cuenta de Claude. Agrégalo en Configuración → Conectores y recarga esta página.", retry:false };
+  if (c === "needs_reauth") return { t: "Tu conexión con Google Sheets venció. Reconéctala en Configuración → Conectores y recarga.", retry:false };
+  if (c === "not_in_manifest" || c === "approval_required" || c === "consent_required") return { t: "La app necesita tu permiso para leer Google Sheets.", retry:true, label:"Dar permiso y leer" };
+  if (c === "selection_required") return { t: "Tienes más de una conexión de Google Sheets. Elige cuál usar en el aviso de Claude y vuelve a intentar.", retry:true, label:"Reintentar" };
+  if (c === "blocked_by_policy") return { t: "Tu organización bloquea esta conexión de Google Sheets.", retry:false };
+  if (c === "server_unavailable" || c === "upstream_error") return { t: "Google Sheets no respondió a tiempo.", retry:true, label:"Reintentar" };
+  if (c === "tool_error") return { t: "Google Sheets devolvió un error: " + (e.message || "sin detalle"), retry:true, label:"Reintentar" };
+  if (c === "not_granted" || c === "capability_disabled" || c === "capability_removed") return { t: "Esta vista no puede leer Google Sheets. Abre la app desde claude.ai.", retry:false };
+  return { t: "No se pudo leer Google Sheets (" + (c || "error") + ").", retry:true, label:"Reintentar" };
+}
+
+/* ---------- catalog ---------- */
+/* Productos que todavía no están en la hoja "Stock de Productos" (p. ej. los que solo se venden por DroPanas) viven en estado/extras */
+function rebuildCatalog(chunks, meta){
+  S.catChunks = chunks; S.catMetaRaw = meta;
+  const list = []; const byKey = new Map(); const byNorm = new Map();
+  const n = meta ? meta.n : chunks.length;
+  const extra = { id: "extras", items: Object.entries(S.extras || {}).map(([k, d]) => [k, "", d, null, "", ""]) };
+  for (let i = 0; i <= n; i++){
+    const c = i < n ? chunks.find(x => x.id === "c" + i) : extra; if (!c) continue;
+    for (const it of (c.items || [])){
+      const [k, sku, desc, ref, code, base] = it;
+      const p = { k, sku, desc, ref, code, base: base || "", nb: norm(base), nd: norm(desc), ns: norm(sku), hay: norm(sku + " " + desc) };
+      list.push(p); byKey.set(k, p);
+      if (p.nd && !byNorm.has(p.nd)) byNorm.set(p.nd, k);
+    }
+  }
+  for (const p of list){ if (p.ns && !byNorm.has(p.ns)) byNorm.set(p.ns, p.k); }
+  S.catalog = list; S.byKey = byKey; S.byNorm = byNorm; S.catMeta = meta || null;
+  const dl = $("#dlProd"); dl.innerHTML = list.map(p => '<option value="' + esc(p.sku + " — " + p.desc) + '"></option>').join("");
+}
+async function importCatalog(){
+  const btn = $("#btnCat"); btn.disabled = true; $("#catMsg").textContent = "Leyendo la hoja de inventario…";
+  try {
+    const [rows, vars] = await Promise.all([
+      getValues(SRC.inv.id, "'" + SRC.inv.sheet + "'!A2:E", true),
+      getValues(SRC.inv.id, "'" + SRC.inv.variantes + "'!A2:D", true).catch(() => [])
+    ]);
+    const baseBySku = new Map(); for (const v of vars){ const s = String(v[0] ?? "").trim(); if (s && v[3]) baseBySku.set(s, String(v[3]).trim()); }
+    const items = []; const seen = new Set(); const seenPair = new Set();
+    for (const r of rows){
+      const sku = String(r[0] ?? "").trim(), desc = String(r[1] ?? "").trim();
+      if (!desc && !sku) continue;
+      const pair = norm(sku) + "|" + norm(desc); if (seenPair.has(pair)) continue; seenPair.add(pair);
+      let k = encKey(sku || ("D:" + norm(desc))); let i = 2; const kb = k; while (seen.has(k)) k = kb + "~" + (i++);
+      seen.add(k);
+      const ref = num(r[4]);
+      items.push([k, sku, desc || sku, isFinite(ref) ? ref : null, (sku.split("-")[0] || "").trim(), baseBySku.get(sku) || ""]);
+    }
+    if (!items.length) throw { code: "tool_error", message: "La hoja de inventario no devolvió productos." };
+    const CH = 700, chunks = [];
+    for (let i = 0; i < items.length; i += CH) chunks.push(items.slice(i, i + CH));
+    $("#catMsg").textContent = "Guardando " + items.length + " productos…";
+    for (let i = 0; i < chunks.length; i++) await enqueue("catalogo/c" + i, () => S.db.doc("catalogo/c" + i).set({ items: chunks[i] }));
+    const prevN = S.catMeta ? S.catMeta.n : 0;
+    for (let i = chunks.length; i < prevN; i++) await S.db.doc("catalogo/c" + i).delete();
+    await S.db.doc("catalogo/meta").set({ n: chunks.length, total: items.length, at: new Date().toISOString(), refDate: today() });
+    $("#catMsg").textContent = "Listo: " + items.length + " productos.";
+    toast("Catálogo actualizado");
+    loadSales(true);
+  } catch(e){
+    const m = e && e.code && !e.code.startsWith("invalid") ? mcpErrText(e).t : dbErrMsg(e);
+    $("#catMsg").textContent = m; toast(m, true);
+  } finally { btn.disabled = false; }
+}
+$("#btnCat").addEventListener("click", importCatalog);
+
+/* ---------- sales ---------- */
+/* Un producto puede estar en varios lugares: se suma el último conteo de cada ubicación.
+   Un conteo nuevo en la misma ubicación reemplaza al anterior de esa ubicación. */
+let lcCache = { src: null, map: null };
+function latestCounts(){
+  if (lcCache.src === S.conteos && lcCache.map) return lcCache.map;
+  const per = new Map();
+  for (const c of S.conteos){
+    const items = c.items || {}, u = norm(c.ubic) || ("#" + c.id);
+    for (const k in items){
+      const q = items[k]; if (q === null || q === undefined) continue;
+      let m = per.get(k); if (!m){ m = new Map(); per.set(k, m); }
+      const cur = m.get(u);
+      if (!cur || c.fecha > cur.d || (c.fecha === cur.d && (c.creado || "") > (cur.creado || ""))) m.set(u, { q: +q, d: c.fecha, creado: c.creado, sid: c.id, ubic: c.ubic || "" });
+    }
+  }
+  const best = new Map();
+  for (const [k, m] of per){
+    const parts = Array.from(m.values()).sort((a, b) => a.d.localeCompare(b.d));
+    const last = parts[parts.length - 1];
+    best.set(k, { q: parts.reduce((t, x) => t + x.q, 0), d: last.d, creado: last.creado, sid: last.sid, parts });
+  }
+  lcCache = { src: S.conteos, map: best };
+  return best;
+}
+function parseVentas(rows, prod, r0){
+  const out = [];
+  for (let i = 0; i < Math.max(rows.length, prod.length); i++){
+    const a = rows[i] || [], b = prod[i] || [];
+    const d = parseDMY(a[2]); if (!d) continue;
+    const name = String(b[0] ?? "").trim(); if (!name) continue;
+    let q = num(b[3]); if (!isFinite(q)) q = 1;
+    out.push({ kind: "venta", d, est: norm(a[3]), t: norm(a[4]) || "SIN TIENDA", name, q, ord: String(a[0] ?? "").trim(), row: r0 + i });
+  }
+  return out;
+}
+async function loadSales(fresh){
+  if (!S.mcp || S.loadingSales) return;
+  S.loadingSales = true; S.salesErr = null; setSync("busy", "Leyendo tu hoja de Ventas…"); renderAlert();
+  try {
+    const counts = latestCounts();
+    let start = addDays(today(), -(S.cfg.diasVentas + 1));
+    for (const v of counts.values()) if (v.d < start) start = v.d;
+    const sh = "'" + SRC.ventas.sheet + "'!";
+    const dates = await getValues(SRC.ventas.id, sh + "D2:D", fresh);
+    let first = dates.length;
+    for (let i = 0; i < dates.length; i++){ const d = parseDMY(dates[i] && dates[i][0]); if (d && d >= start){ first = i; break; } }
+    const r0 = Math.max(2, 2 + first - 300), last = 1 + dates.length;
+    let rows = [], prod = [];
+    if (last >= r0){
+      [rows, prod] = await Promise.all([ getValues(SRC.ventas.id, sh + "B" + r0 + ":F" + last, fresh), getValues(SRC.ventas.id, sh + "H" + r0 + ":K" + last, fresh) ]);
+    }
+    const out = parseVentas(rows, prod, r0);
+    const lastVenta = out.reduce((m, r) => r.d > m ? r.d : m, "");
+    // Otras hojas (más pequeñas): se leen completas, así el historial de cada producto queda entero
+    const q = s => "'" + s + "'!";
+    const [mayor, cyr, ie, glos] = await Promise.allSettled([
+      getValues(SRC.ventas.id, q(SRC.ventas.merc) + "C2:F", fresh),
+      getValues(SRC.ventas.id, q(SRC.ventas.cyr) + "A3:J", fresh),
+      getValues(SRC.inv.id, q(SRC.inv.ie) + "B2:G", fresh),
+      getValues(SRC.fin.id, q(SRC.fin.sheet) + "A2:C", fresh)
+    ]);
+    const warn = [];
+    if (mayor.status === "fulfilled"){
+      mayor.value.forEach((r, i) => { const d = parseDMY(r[0]); const name = String(r[2] ?? "").trim(); if (!d || !name) return; let qq = num(r[3]); if (!isFinite(qq)) qq = 1;
+        out.push({ kind: "mayor", d, est: "AL MAYOR", t: MAYOR, name, q: qq, who: String(r[1] ?? "").trim(), row: i + 2 }); });
+    } else warn.push("MERCANCIA - NUEVO (ventas al mayor)");
+    if (cyr.status === "fulfilled"){
+      cyr.value.forEach((r, i) => { const d = parseDMY(r[0]); if (!d) return; const est = norm(r[4]), t = norm(r[2]) || "SIN TIENDA", averia = String(r[5]).toUpperCase() === "TRUE";
+        const back = String(r[6] ?? "").trim(), out2 = String(r[8] ?? "").trim();
+        if (back){ let qq = num(r[7]); if (!isFinite(qq)) qq = 1; out.push({ kind: "cvuelve", d, est, t, name: back, q: qq, averia, row: i + 3 }); }
+        if (out2){ let qq = num(r[9]); if (!isFinite(qq)) qq = 1; out.push({ kind: "csale", d, est, t, name: out2, q: qq, row: i + 3 }); } });
+    } else warn.push("CAMBIOS Y REEMBOLSOS");
+    if (ie.status === "fulfilled"){
+      S.ieSkip = [];
+      ie.value.forEach((r, i) => { const d = parseDMY(r[0]); const name = String(r[3] ?? "").trim(); const tipo = norm(r[4]); let qq = num(r[5]);
+        if (name && (!d || (tipo !== "INGRESO" && tipo !== "EGRESO") || !isFinite(qq))){ S.ieSkip.push({ row: i + 2, d: String(r[0] ?? ""), name, why: !d ? "sin fecha" : (tipo !== "INGRESO" && tipo !== "EGRESO") ? "no dice si es INGRESO o EGRESO" : "sin cantidad" }); return; }
+        if (!d || !name) return;
+        out.push({ kind: tipo === "INGRESO" ? "ingreso" : "egreso", d, est: tipo, t: norm(r[1]) || "GENERAL", name, q: qq, who: String(r[2] ?? "").trim(), row: i + 2 }); });
+    } else warn.push("Ingresos/Egresos");
+    if (glos.status === "fulfilled"){ S.glos = glos.value; S.glosErr = null; } else { S.glosErr = glos.reason; warn.push("COSTOS GLOSARIO (finanzas)"); }
+    S.srcWarn = warn;
+    S.sales = out; S.salesInfo = { at: new Date(), from: start, rows: out.length, lastDate: lastVenta };
+    setSync(warn.length ? "err" : "ok", "Ventas leídas hasta " + fmtD(lastVenta) + " · " + S.salesInfo.at.toLocaleTimeString("es-VE", {hour:"2-digit",minute:"2-digit"}) + (warn.length ? " · faltó " + warn.length + " hoja" + (warn.length > 1 ? "s" : "") : ""));
+  } catch(e){
+    S.salesErr = e; setSync("err", "No se pudieron leer las ventas");
+  } finally { S.loadingSales = false; recompute(); render(); }
+}
+$("#btnRefresh").addEventListener("click", () => { const had = !!S.fullVentas; S.fullVentas = null; HIST.from = null; loadSales(true).then(() => { if (had) loadHist(true); }); });
+
+/* ---------- core calculation ---------- */
+function resolveName(nm){
+  if (Object.prototype.hasOwnProperty.call(S.alias, nm) && S.alias[nm]) return S.alias[nm];
+  return S.byNorm.get(nm) || null;
+}
+/* Reglas de cada movimiento */
+const isOut = s => (s.kind === "venta" && SALIDA.has(s.est)) || s.kind === "mayor" || (s.kind === "csale" && SALIDA.has(s.est)) || s.kind === "egreso";
+const isIn = s => (s.kind === "cvuelve" && SALIDA.has(s.est) && !s.averia) || (s.kind === "ingreso" && s.d <= today());
+const isComing = s => s.kind === "ingreso" && s.d > today();
+const isRes = s => (s.kind === "venta" || s.kind === "csale") && RESERVA.has(s.est);
+const isVel = s => (s.kind === "venta" && SALIDA.has(s.est)) || (s.kind === "mayor" && S.cfg.mayorEnCompras);
+/* Costos del glosario de finanzas: nombre exacto → producto base → lo más repetido entre sus tallas/colores */
+let glosBuiltFor = null, glosBuiltCat = null;
+function buildGlos(){
+  if (glosBuiltFor === S.glos && glosBuiltCat === S.catalog) return;
+  glosBuiltFor = S.glos; glosBuiltCat = S.catalog; const m = new Map(), out = new Map();
+  for (const r of (S.glos || [])){ const n = norm(r[1]); const c = num(r[2]); if (n && isFinite(c) && c > 0) m.set(n, c); }
+  if (!m.size){ S.glosCost = out; return; }
+  const entries = Array.from(m.entries());
+  const byBase = new Map();
+  for (const p of S.catalog){
+    if (m.has(p.nd)){ out.set(p.k, { c: m.get(p.nd), how: "exacto" }); continue; }
+    if (p.nb && m.has(p.nb)){ out.set(p.k, { c: m.get(p.nb), how: "producto" }); continue; }
+    if (p.nb){
+      let best = byBase.get(p.nb);
+      if (best === undefined){
+        const cnt = new Map(); const pre = p.nb + " ";
+        for (const [n, c] of entries) if (n.startsWith(pre)) cnt.set(c, (cnt.get(c) || 0) + 1);
+        best = null; let bn = 0; for (const [c, n] of cnt) if (n > bn){ best = c; bn = n; }
+        byBase.set(p.nb, best);
+      }
+      if (best !== null) out.set(p.k, { c: best, how: "variantes" });
+    }
+  }
+  S.glosCost = out;
+}
+function recompute(){
+  const cfg = S.cfg, td = today(), vStart = addDays(td, -(cfg.diasVentas - 1));
+  const counts = latestCounts();
+  const salesBy = new Map(), unm = new Map(), storeSet = new Map(), from = S.salesInfo ? S.salesInfo.from : "0";
+  for (const s of (S.sales || [])){
+    const nm = norm(s.name); const k = resolveName(nm);
+    if (k === IGN) continue;
+    if (!k || !S.byKey.has(k)){
+      if (s.d < from) continue;
+      let u = unm.get(nm); if (!u){ u = { nm, name: s.name, q: 0, n: 0, t: new Set(), src: new Set(), last: "" }; unm.set(nm, u); }
+      u.q += s.q; u.n++; u.t.add(s.t); u.src.add(SRC_LABEL[s.kind]); if (s.d > u.last) u.last = s.d; continue;
+    }
+    let arr = salesBy.get(k); if (!arr){ arr = []; salesBy.set(k, arr); } arr.push(s);
+    if (isVel(s) && s.d >= vStart && s.d <= td) storeSet.set(s.t, (storeSet.get(s.t) || 0) + s.q);
+  }
+  // Con el historial completo cargado, también se listan los nombres sin vincular de meses anteriores
+  for (const s of (S.fullVentas || [])){
+    if (s.kind === "venta" && s.sh === SRC.ventas.sheet && s.d >= from) continue;
+    const nm = norm(s.name); const k = resolveName(nm);
+    if (k === IGN || (k && S.byKey.has(k))) continue;
+    let u = unm.get(nm); if (!u){ u = { nm, name: s.name, q: 0, n: 0, t: new Set(), src: new Set(), last: "" }; unm.set(nm, u); }
+    u.q += s.q; u.n++; u.t.add(s.t); u.src.add(s.sh || SRC_LABEL[s.kind]); if (s.d > u.last) u.last = s.d;
+  }
+  buildGlos();
+  const inBy = new Map();
+  for (const c of S.compras){ for (const it of (c.items || [])){ let a = inBy.get(it.k); if (!a){ a = []; inBy.set(it.k, a); } a.push({ d: c.fecha, q: (isSalidaTipo(c.tipo) ? -1 : 1) * (+it.q || 0) }); } }
+  const calc = new Map(), need = cfg.diasEntrega + cfg.diasCobertura;
+  const byK = S.fullVentas ? histByK() : null;
+  for (const p of S.catalog){
+    const base = counts.get(p.k) || null, sales = salesBy.get(p.k) || [];
+    let out = 0, res = 0, vel = 0; const velT = {};
+    let inn = 0, coming = 0;
+    for (const s of sales){
+      const after = base && s.d > base.d;
+      if (isComing(s)) coming += s.q;
+      else if (isOut(s)){ if (after) out += s.q; }
+      else if (isIn(s)){ if (after) inn += s.q; }
+      else if (isRes(s)){ if (base ? s.d > base.d : s.d >= from) res += s.q; }
+      if (isVel(s) && s.d >= vStart && s.d <= td){ vel += s.q; velT[s.t] = (velT[s.t] || 0) + s.q; }
+    }
+    if (base) for (const e of (inBy.get(p.k) || [])) if (e.d > base.d){ if (e.q >= 0) inn += e.q; else out -= e.q; }
+    const stock = base ? base.q + inn - out : null;
+    /* Sin conteo: estimado = Stock Inicial 01/01/2026 del Excel + movimientos desde el día siguiente */
+    let est = null;
+    const ini = !base && byK && S.inicial ? S.inicial[p.k] : null;
+    if (ini){
+      est = ini.q;
+      for (const s of (byK.get(p.k) || []).concat(sales.filter(s => s.kind !== "venta"))){ if (s.d <= ini.d || s.d > td) continue; if (isOut(s)) est -= s.q; else if (isIn(s)) est += s.q; }
+      for (const e of (inBy.get(p.k) || [])) if (e.d > ini.d && e.d <= td) est += e.q;
+    }
+    const disp = stock === null ? null : stock - res;
+    const perDay = vel / cfg.diasVentas;
+    const dias = disp === null ? null : (perDay > 0 ? disp / perDay : Infinity);
+    let st;
+    if (!base) st = (vel > 0 || res > 0) ? "sinconteo" : "nodata";
+    else if (stock < 0) st = "revisar";
+    else if (vel <= 0) st = "sinventas";
+    else if (disp <= 0) st = "agotado";
+    else if (dias < cfg.diasEntrega) st = "urgente";
+    else if (dias < need) st = "comprar";
+    else st = "ok";
+    const sug = perDay > 0 ? Math.max(0, Math.ceil(perDay * need - Math.max(disp ?? 0, 0) - coming)) : 0;
+    const manual = isFinite(S.costs[p.k]) && S.costs[p.k] !== null ? +S.costs[p.k] : null;
+    const g = S.glosCost.get(p.k) || null;
+    const cost = manual !== null ? manual : (g ? g.c : null);
+    calc.set(p.k, { p, base, out, inn, coming, res, stock, disp, est, estIni: ini, vel, velT, perDay, dias, st, sug, cost, manual, g, val: (stock > 0 && cost !== null) ? stock * cost : 0, sales });
+  }
+  S.calc = calc;
+  S.stores = Array.from(storeSet.entries()).sort((a,b) => b[1] - a[1]);
+  S.unmatched = Array.from(unm.values()).sort((a,b) => b.q - a.q);
+}
+const ST_LABEL = { urgente:"Urgente", agotado:"Agotado", comprar:"Comprar", ok:"Cubierto", sinconteo:"Sin conteo", sinventas:"Sin ventas", nodata:"Sin datos", revisar:"Revisar" };
+const ST_RANK = { agotado:0, urgente:1, revisar:2, comprar:3, sinconteo:4, ok:5, sinventas:6, nodata:7 };
+const pill = st => '<span class="pill p-' + st + '">' + ST_LABEL[st] + '</span>';
+const isBuy = c => c.st === "urgente" || c.st === "agotado" || c.st === "comprar";
+function matchQ(c, q){ return !q || c.p.hay.includes(q) || norm(S.ubic[c.p.k]).includes(q); }
+
+/* ---------- render ---------- */
+function render(){
+  const ae = document.activeElement;
+  const keep = ae && ae.id && ae.tagName === "INPUT" && ae.closest("section.view") ? { id: ae.id, v: ae.value, s: ae.selectionStart, e: ae.selectionEnd } : null;
+  renderInner();
+  if (keep){
+    const el = document.getElementById(keep.id);
+    if (el && el !== document.activeElement && !el.hasAttribute("list")){
+      el.value = keep.v; el.focus();
+      try { if (keep.s !== null) el.setSelectionRange(keep.s, keep.e); } catch(e){}
+    }
+  }
+}
+function renderInner(){
+  renderAlert();
+  const any = S.catalog.length > 0;
+  const calcs = Array.from(S.calc.values());
+  const nBuy = calcs.filter(isBuy).length;
+  $("#bComprar").textContent = nBuy; $("#bComprar").className = "badge" + (calcs.some(c => c.st === "urgente" || c.st === "agotado") ? " hot" : "");
+  const noCost = calcs.filter(c => c.cost === null && ((c.stock || 0) > 0 || c.vel > 0)).length;
+  $("#bCostos").textContent = noCost;
+  $("#bVinc").textContent = S.unmatched.length; $("#bVinc").className = "badge" + (S.unmatched.length ? " hot" : "");
+  $("#bCuadre").textContent = latestCounts().size;
+  if (!S.db) return;
+  const v = S.view;
+  if (v === "resumen") renderResumen(calcs, any);
+  else if (v === "comprar") renderBuy(calcs);
+  else if (v === "inventario") renderInv(calcs);
+  else if (v === "conteo") renderConteo();
+  else if (v === "cuadre") renderCuadre();
+  else if (v === "compras") renderCompras();
+  else if (v === "costos") renderCostos(calcs);
+  else if (v === "vincular") renderVinc();
+  else if (v === "ajustes") renderAjustes();
+  else if (v === "reglas") renderReglas();
+}
+function renderReglas(){
+  const rows = [];
+  if (S.salesInfo) rows.push(["Despacho actual · Ventas (para el stock de hoy)", S.salesInfo.rows, S.salesInfo.from, S.salesInfo.lastDate]);
+  for (const s of HIST.stats) rows.push([s.src, s.n, s.from, s.to]);
+  $("#rgSrc").innerHTML = (rows.length ? '<div class="tbl-wrap"><table><thead><tr><th>Hoja</th><th class="n">Movimientos</th><th>Desde</th><th>Hasta</th></tr></thead><tbody>' +
+    rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td class="n">' + fmtN(r[1]) + '</td><td>' + fmtD(r[2]) + '</td><td>' + fmtD(r[3]) + '</td></tr>').join("") + '</tbody></table></div>' : '<p class="muted">Todavía no se ha leído el historial.</p>') +
+    '<div class="row" style="margin-top:8px">' + (S.fullVentas ? '' : '<button class="btn sm" type="button" id="rgLoad"' + (HIST.loading ? ' disabled' : '') + '>' + (HIST.loading ? 'Leyendo 2026…' : 'Leer historial 2026') + '</button>') +
+    (HIST.y25 ? '' : '<button class="btn sm" type="button" id="rg25"' + (HIST.loading25 ? ' disabled' : '') + '>' + (HIST.loading25 ? 'Leyendo 2025…' : 'Leer también 2025') + '</button>') + '</div>' +
+    (HIST.err ? '<p class="neg">' + esc(HIST.err) + '</p>' : '') + (HIST.err25 ? '<p class="neg">' + esc(HIST.err25) + '</p>' : '') +
+    ((S.ieSkip || []).length ? '<h3 style="margin-top:12px">Filas de Ingresos/Egresos 2026 que no se pueden contar</h3><p class="muted">Hay que completarlas en tu Excel para que cuenten.</p><div class="tbl-wrap"><table><thead><tr><th class="n">Fila</th><th>Fecha</th><th>Producto</th><th>Qué falta</th></tr></thead><tbody>' +
+      S.ieSkip.map(s => '<tr><td class="n">' + s.row + '</td><td>' + esc(s.d) + '</td><td>' + esc(s.name) + '</td><td>' + esc(s.why) + '</td></tr>').join("") + '</tbody></table></div>' : '');
+  const a = $("#rgLoad"); if (a) a.onclick = () => loadHist(false);
+  const b = $("#rg25"); if (b) b.onclick = () => load25(false);
+}
+function renderAlert(){
+  const box = $("#globalAlert");
+  if (S.salesErr){
+    const m = mcpErrText(S.salesErr);
+    box.innerHTML = '<div class="alert err"><p>' + esc(m.t) + '</p>' + (m.retry ? '<button class="btn sm" type="button" id="alertRetry">' + esc(m.label) + '</button>' : '') + '</div>';
+    const b = $("#alertRetry"); if (b) b.onclick = () => loadSales(true);
+  } else box.innerHTML = "";
+}
+function emptyCatalog(){
+  return '<div class="panel"><div class="empty"><strong>Primero trae tu catálogo de productos</strong><p>La app copia la lista de productos (con códigos, tallas y colores) de tu hoja INVENTARIO DESPACHO CARACAS - 2026. Solo lee la hoja, no la modifica.</p><button class="btn pri" type="button" id="setupImport">Traer catálogo</button></div></div>';
+}
+function renderResumen(calcs, any){
+  const sb = $("#setupBox");
+  if (S.ready.catalogo && !any){ sb.innerHTML = emptyCatalog(); $("#setupImport").onclick = importCatalog; }
+  else if (any && !S.conteos.length){ sb.innerHTML = '<div class="alert warn"><p>Todavía no hay conteos. Sin un conteo con fecha la app no sabe cuánto tienes. Carga tu último conteo o arranca con el stock del sistema anterior.</p><button class="btn sm" type="button" data-go="conteo">Ir a Conteos</button></div>'; }
+  else sb.innerHTML = "";
+  let val = 0, withCost = 0, stockNoCost = 0;
+  for (const c of calcs){ if ((c.stock || 0) > 0){ if (c.cost !== null){ val += c.val; withCost++; } else stockNoCost++; } }
+  $("#kValor").textContent = any && S.conteos.length ? fmtUSD(val) : "—";
+  $("#kValorSub").textContent = stockNoCost ? stockNoCost + " productos con stock no tienen costo" : (withCost ? withCost + " productos con stock y costo" : "Pon los costos para ver el valor");
+  const urg = calcs.filter(c => c.st === "urgente" || c.st === "agotado").length;
+  $("#kUrg").textContent = S.sales ? urg : "—";
+  $("#kUrgSub").textContent = S.sales ? "Duran menos de " + S.cfg.diasEntrega + " días (lo que tarda un pedido)" : "Esperando las ventas";
+  $("#kCom").textContent = S.sales ? calcs.filter(c => c.st === "comprar").length : "—";
+  $("#kSin").textContent = S.sales ? calcs.filter(c => c.st === "sinconteo").length : "—";
+  const top = calcs.filter(isBuy).sort(buySort).slice(0, 8);
+  $("#topBuy").innerHTML = !S.sales ? '<p class="muted">Esperando las ventas…</p>' : top.length ? '<div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Disponible</th><th class="n">Dura</th><th class="n">Comprar</th></tr></thead><tbody>' +
+    top.map(c => '<tr class="click" data-k="' + esc(c.p.k) + '"><td><div class="pname">' + esc(c.p.desc) + '</div><div class="sku">' + esc(c.p.sku) + '</div></td><td class="n' + (c.disp < 0 ? ' neg' : '') + '">' + fmtN(c.disp) + '</td><td class="n">' + diasTxt(c.dias) + '</td><td class="n"><b>' + fmtN(c.sug) + '</b></td></tr>').join("") + '</tbody></table></div>'
+    : '<p class="muted">' + (S.conteos.length ? 'Nada urgente con los productos contados.' : 'Carga un conteo para ver qué comprar.') + '</p>';
+  $("#hTiendas").textContent = "Unidades despachadas por tienda · últimos " + S.cfg.diasVentas + " días";
+  const mx = S.stores.length ? S.stores[0][1] : 1;
+  $("#tiendaBars").innerHTML = !S.sales ? '<p class="muted">Esperando las ventas…</p>' : S.stores.length ? S.stores.map(([t, q]) => '<div class="bar"><span>' + esc(t) + '</span><span class="track"><span class="fill" style="width:' + Math.max(2, q / mx * 100).toFixed(1) + '%"></span></span><span class="v">' + fmtN(q) + '</span></div>').join("") : '<p class="muted">Sin despachos en este período.</p>';
+}
+function diasTxt(d){ if (d === null || d === undefined) return "—"; if (d === Infinity) return "∞"; if (d <= 0) return "0 días"; return fmtN(Math.floor(d)) + " días"; }
+function buySort(a, b){ return (ST_RANK[a.st] - ST_RANK[b.st]) || ((a.dias ?? 1e9) - (b.dias ?? 1e9)) || (b.vel - a.vel); }
+
+function renderBuy(calcs){
+  const q = norm($("#qBuy").value), f = S.f.buy, ft = S.f.buyT;
+  const sel = $("#tiendaBuy"); const cur = sel.value;
+  sel.innerHTML = '<option value="">Todas las tiendas</option>' + S.stores.map(([t]) => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join("");
+  sel.value = S.stores.some(([t]) => t === cur) ? cur : ""; S.f.buyT = sel.value;
+  $("#buyLead").textContent = "Según lo despachado en los últimos " + S.cfg.diasVentas + " días. Un pedido tarda " + S.cfg.diasEntrega + " días en llegar y quieres " + S.cfg.diasCobertura + " días de stock, así que compras para " + (S.cfg.diasEntrega + S.cfg.diasCobertura) + " días.";
+  if (!S.sales){ $("#buyTable").innerHTML = '<div class="panel"><div class="empty"><strong>Esperando las ventas</strong><p>La lista se arma con tu hoja de Ventas.</p></div></div>'; return; }
+  let list = calcs.filter(c => matchQ(c, q));
+  if (f === "pedir") list = list.filter(isBuy);
+  else if (f === "urgente") list = list.filter(c => c.st === "urgente" || c.st === "agotado");
+  else if (f === "sinconteo") list = list.filter(c => c.st === "sinconteo");
+  else list = list.filter(c => c.vel > 0 || c.res > 0);
+  if (S.f.buyT) list = list.filter(c => (c.velT[S.f.buyT] || 0) > 0);
+  list.sort(buySort);
+  const stores = S.stores.map(s => s[0]).filter(t => !S.f.buyT || t === S.f.buyT).filter(t => list.some(c => c.velT[t]));
+  let inv = 0, missing = 0; for (const c of list){ if (c.sug > 0){ if (c.cost !== null) inv += c.sug * c.cost; else missing++; } }
+  const shown = list.slice(0, S.lim.buy);
+  if (!list.length){ $("#buyTable").innerHTML = '<div class="panel"><div class="empty"><strong>' + (S.conteos.length ? 'Nada que comprar con este filtro' : 'Carga un conteo para calcular compras') + '</strong></div></div>'; return; }
+  $("#buyTable").innerHTML =
+    '<p class="muted">' + list.length + ' productos · inversión estimada ' + fmtUSD(inv) + (missing ? ' (' + missing + ' sin costo, no incluidos)' : '') + '</p>' +
+    '<div class="tbl-wrap"><table><thead><tr><th>Producto</th><th>Estado</th><th class="n">Disponible</th><th class="n">Reservado</th>' +
+    stores.map(t => '<th class="n">' + esc(t) + '</th>').join("") + (S.f.buyT ? '' : '<th class="n">Total</th>') +
+    '<th class="n">Dura</th><th class="n">Comprar</th><th class="n">Costo est.</th></tr></thead><tbody>' +
+    shown.map(c => '<tr class="click" data-k="' + esc(c.p.k) + '"><td><div class="pname">' + esc(c.p.desc) + '</div><div class="sku">' + esc(c.p.sku) + '</div></td><td>' + pill(c.st) + '</td>' +
+      '<td class="n' + ((c.disp ?? 0) < 0 ? ' neg' : '') + '">' + (c.disp === null && c.est !== null ? '<span class="muted" title="Estimado sin conteo">≈ ' + fmtN(c.est - c.res) + '</span>' : fmtN(c.disp)) + '</td><td class="n">' + fmtN(c.res) + '</td>' +
+      stores.map(t => '<td class="n">' + (c.velT[t] ? fmtN(c.velT[t]) : '<span class="muted">·</span>') + '</td>').join("") + (S.f.buyT ? '' : '<td class="n"><b>' + fmtN(c.vel) + '</b></td>') +
+      '<td class="n">' + diasTxt(c.dias) + '</td><td class="n"><b>' + (c.base ? fmtN(c.sug) : '<span class="muted">contar</span>') + '</b>' + (c.coming ? '<div class="sku">' + fmtN(c.coming) + ' en camino</div>' : '') + '</td><td class="n">' + (c.cost !== null && c.sug ? fmtUSD(c.sug * c.cost) : '<span class="muted">—</span>') + '</td></tr>').join("") +
+    '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="moreBuy">Ver ' + Math.min(PAGE, list.length - shown.length) + ' más</button>' : '');
+  const mb = $("#moreBuy"); if (mb) mb.onclick = () => { S.lim.buy += PAGE; render(); };
+  S._buyList = list;
+}
+$("#btnCopyBuy").addEventListener("click", async () => {
+  const list = (S._buyList || []).filter(c => c.sug > 0);
+  if (!list.length){ toast("No hay cantidades para copiar"); return; }
+  const txt = "Pedido sugerido " + fmtD(today()) + "\n" + list.map(c => c.p.desc + (c.p.sku ? " (" + c.p.sku + ")" : "") + ": " + c.sug).join("\n");
+  try { await navigator.clipboard.writeText(txt); toast("Lista copiada"); }
+  catch(e){ openDlg('<h2>Lista para copiar</h2><textarea id="copyTa" readonly>' + esc(txt) + '</textarea><div class="row"><span class="spacer"></span><button class="btn" type="button" data-close>Cerrar</button></div>'); const ta = $("#copyTa"); ta.focus(); ta.select(); }
+});
+
+function renderInv(calcs){
+  if (S.ready.catalogo && !S.catalog.length){ $("#invTable").innerHTML = emptyCatalog(); $("#setupImport").onclick = importCatalog; return; }
+  const q = norm($("#qInv").value), f = S.f.inv;
+  let list = calcs.filter(c => matchQ(c, q));
+  if (f === "constock") list = list.filter(c => (c.stock || 0) > 0);
+  else if (f === "negativo") list = list.filter(c => c.stock !== null && c.stock < 0);
+  else if (f === "sinconteo") list = list.filter(c => c.st === "sinconteo");
+  else if (f === "viejo") list = list.filter(c => c.base && c.base.d < addDays(today(), -30));
+  const us = $("#ubicInv"), ubics = ubicList();
+  us.innerHTML = '<option value="">Todas las ubicaciones</option><option value="__none">Sin ubicación</option>' + ubics.map(u => '<option value="' + esc(u) + '">' + esc(u) + '</option>').join("");
+  us.value = S.f.invU === "__none" || ubics.includes(S.f.invU) ? S.f.invU : ""; S.f.invU = us.value;
+  if (S.f.invU === "__none") list = list.filter(c => !S.ubic[c.p.k]);
+  else if (S.f.invU) list = list.filter(c => S.ubic[c.p.k] === S.f.invU);
+  list.sort((a, b) => (b.base ? 1 : 0) - (a.base ? 1 : 0) || (b.vel - a.vel) || a.p.desc.localeCompare(b.p.desc));
+  const shown = list.slice(0, S.lim.inv);
+  let tot = 0; for (const c of list) tot += c.val;
+  const byKc = S.fullVentas ? histByK() : null;
+  const cuaOf = c => (byKc && c.base) ? cuadreFor(c.p.k, byKc) : null;
+  $("#invTable").innerHTML = invBanner(byKc) + '<p class="muted">' + list.length + ' productos · valor a costo ' + fmtUSD(tot) + '</p>' +
+    '<div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Contaste</th><th>Cuadre con tus Excel<div class="sku">partida + entradas − salidas hasta el conteo</div></th><th class="n">+ Entradas<div class="sku">después del conteo</div></th><th class="n">− Salidas<div class="sku">después del conteo</div></th><th class="n">Stock hoy</th><th class="n">Reservado</th><th class="n">Costo</th><th class="n">Valor</th></tr></thead><tbody>' +
+    (shown.length ? shown.map(c => '<tr class="click" data-k="' + esc(c.p.k) + '"><td><div class="pname">' + esc(c.p.desc) + '</div><div class="sku">' + esc(c.p.sku) + (S.ubic[c.p.k] ? ' · 📍 ' + esc(S.ubic[c.p.k]) : '') + '</div></td>' +
+      '<td class="n">' + (c.base ? fmtN(c.base.q) + ' <span class="muted">· ' + fmtD(c.base.d) + '</span>' + (c.base.parts && c.base.parts.length > 1 ? '<div class="sku">suma de ' + c.base.parts.length + ' lugares</div>' : '') : '<span class="muted">sin conteo</span>') + '</td>' +
+      '<td>' + cuaCell(c, cuaOf(c)) + '</td>' +
+      '<td class="n">' + (c.base ? fmtN(c.inn) : '—') + '</td><td class="n">' + (c.base ? fmtN(c.out) : '—') + '</td>' +
+      '<td class="n' + (c.stock !== null && c.stock < 0 ? ' neg' : '') + '">' + (c.stock === null && c.est !== null ? '<span class="muted" title="Estimado: stock inicial 01/01/2026 + movimientos. Falta conteo físico.">≈ ' + fmtN(c.est) + '</span>' : '<b>' + fmtN(c.stock) + '</b>') + '</td><td class="n">' + fmtN(c.res) + '</td>' +
+      '<td class="n">' + (c.cost !== null ? fmtUSD(c.cost) : '<span class="muted">—</span>') + '</td><td class="n">' + (c.val ? fmtUSD(c.val) : '<span class="muted">—</span>') + '</td></tr>').join("")
+      : '<tr><td colspan="9"><div class="empty">Ningún producto con este filtro.</div></td></tr>') +
+    '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="moreInv">Ver ' + Math.min(PAGE, list.length - shown.length) + ' más</button>' : '');
+  const mb = $("#moreInv"); if (mb) mb.onclick = () => { S.lim.inv += PAGE; render(); };
+}
+
+function cuaCell(c, r){
+  if (!c.base) return '<span class="muted">—</span>';
+  if (!r) return '<span class="muted">' + (HIST.loading ? 'leyendo historial…' : (HIST.err ? 'no se pudo leer' : '…')) + '</span>';
+  return '<span class="nowrap">' + fmtN(r.start) + ' + ' + fmtN(r.tin) + ' − ' + fmtN(r.tout) + ' = <b>' + fmtN(r.calc) + '</b></span><div>' + cuaPill(r) + cuaWhy(r) + '</div>';
+}
+function cuaWhy(r){
+  if (Math.abs(r.diff) < 1e-9) return '';
+  if (r.start + r.tin <= 0 && r.base.q > 0) return '<div class="sku">No hay ninguna entrada anotada</div>';
+  if (r.diff < 0 && r.tout === 0) return '<div class="sku">No hay ninguna salida anotada</div>';
+  return '';
+}
+function invBanner(byK){
+  if (!S.fullVentas) return '<div class="note">' + (HIST.loading ? '<b>Leyendo todo el historial</b> (stock inicial, ingresos/egresos, ventas, al mayor y cambios desde enero)…' : (HIST.err ? '<span class="neg">No se pudo leer el historial: ' + esc(HIST.err) + '</span>' : 'Falta leer el historial completo.')) + '</div>';
+  const n = k => { const s = HIST.stats.filter(x => x.src.startsWith(k)); return s.reduce((t, x) => t + x.n, 0); };
+  let ok = 0, falt = 0, sob = 0, sinIn = 0, tot = 0;
+  for (const k of latestCounts().keys()){ const r = cuadreFor(k, byK); if (!r) continue; tot++;
+    if (Math.abs(r.diff) < 1e-9) ok++; else if (r.diff < 0) falt++; else sob++;
+    if (r.start + r.tin <= 0 && r.base.q > 0) sinIn++; }
+  return '<div class="panel"><h3>Lo que la app toma de tus Excel</h3><p class="muted">Stock inicial del 01/01/2026 de ' + fmtN(Object.keys(S.inicial || {}).length) + ' productos · ' +
+    fmtN(n("Ingresos/Egresos")) + ' ingresos y egresos (importaciones, DroPanas, Maracaibo) · ' + fmtN(n("Ventas")) + ' ventas · ' + fmtN(n("Al mayor")) + ' ventas al mayor (incluye mercancía dañada) · ' + fmtN(n("Cambios")) + ' cambios.</p>' +
+    (tot ? '<p>De <b>' + tot + '</b> productos contados: <b>' + ok + '</b> cuadran, a <b>' + falt + '</b> les falta mercancía y a <b>' + sob + '</b> les sobra' + (sinIn ? ' (' + sinIn + ' de ellos no tienen ninguna entrada anotada)' : '') + '. <button class="btn sm" type="button" data-go="cuadre">Ver el cuadre</button></p>' : '') + '</div>';
+}
+
+/* product picker (conteo + entradas) */
+function bindPicker(root, onPick){
+  const inp = $("input", root), res = $(".res", root);
+  function show(){
+    const q = norm(inp.value); if (q.length < 2){ res.hidden = true; return; }
+    const words = q.split(" ");
+    const hits = []; for (const p of S.catalog){ if (words.every(w => p.hay.includes(w))){ hits.push(p); if (hits.length >= 12) break; } }
+    res.innerHTML = hits.length ? hits.map(p => '<button type="button" data-k="' + esc(p.k) + '"><span class="sku">' + esc(p.sku) + '</span><span>' + esc(p.desc) + '</span></button>').join("") : '<div class="muted" style="padding:10px">Sin resultados</div>';
+    res.hidden = false;
+  }
+  inp.addEventListener("input", show); inp.addEventListener("focus", show);
+  inp.addEventListener("keydown", e => { if (e.key === "Enter"){ const b = $("button", res); if (b){ e.preventDefault(); b.click(); } } if (e.key === "Escape") res.hidden = true; });
+  res.addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (!b) return; onPick(b.dataset.k); inp.value = ""; res.hidden = true; });
+  document.addEventListener("click", e => { if (!root.contains(e.target)) res.hidden = true; });
+}
+
+/* ---------- conteos ---------- */
+bindPicker($("#cPicker"), k => { if (!S.draftC.has(k)) S.draftC.set(k, ""); renderConteo(); const i = $('#cItems input[data-k="' + CSS.escape(k) + '"]'); if (i) i.focus(); });
+$("#cPasteToggle").addEventListener("click", () => { $("#cPasteBox").hidden = !$("#cPasteBox").hidden; });
+function parsePaste(txt){
+  const ok = [], bad = [];
+  for (const l of txt.split(/\r?\n/).map(x => x.trim()).filter(Boolean)){
+    const parts = l.split(/\t|;|\s{2,}/).map(x => x.trim()).filter(Boolean);
+    if (parts.length < 2){ bad.push(l); continue; }
+    const qv = num(parts[parts.length - 1]); const k = resolveName(norm(parts.slice(0, -1).join(" ")));
+    if (!k || k === IGN || !S.byKey.has(k) || !isFinite(qv)){ bad.push(l); continue; }
+    ok.push([k, qv]);
+  }
+  return { ok, bad };
+}
+$("#cPasteGo").addEventListener("click", () => {
+  const lines = $("#cPaste").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let ok = 0; const bad = [];
+  for (const l of lines){
+    const parts = l.split(/\t|;|\s{2,}/).map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2){ bad.push(l); continue; }
+    const qv = num(parts[parts.length - 1]); const name = parts.slice(0, -1).join(" ");
+    const k = resolveName(norm(name));
+    if (!k || k === IGN || !S.byKey.has(k) || !isFinite(qv)){ bad.push(l); continue; }
+    S.draftC.set(k, String(qv)); ok++;
+  }
+  $("#cPasteMsg").textContent = ok + " agregados" + (bad.length ? " · " + bad.length + " sin reconocer: " + bad.slice(0, 5).join(" | ") + (bad.length > 5 ? "…" : "") : "");
+  if (ok) $("#cPaste").value = bad.join("\n");
+  renderConteo();
+});
+/* Listas para salir a contar: por ubicación, lo que más se vende sin conteo, o conteos viejos */
+function countList(v){
+  const all = Array.from(S.calc.values());
+  if (v === "__top") return all.filter(c => !c.base && c.vel > 0).sort((a, b) => b.vel - a.vel).slice(0, 30);
+  if (v === "__neg") return all.filter(c => c.stock !== null && c.stock < 0).sort((a, b) => a.stock - b.stock);
+  if (v === "__old") return all.filter(c => c.base && c.base.d < addDays(today(), -30) && c.vel > 0).sort((a, b) => b.vel - a.vel);
+  if (v) return all.filter(c => S.ubic[c.p.k] === v).sort((a, b) => a.p.desc.localeCompare(b.p.desc, "es"));
+  return [];
+}
+function renderCountList(){
+  const sel = $("#cListU"), cur = sel.value;
+  const opts = [["", "Elige qué contar…"], ["__top", "Lo que más se vende y no tiene conteo (30)"], ["__neg", "Productos en negativo"], ["__old", "Contados hace más de 30 días"]].concat(ubicList().map(u => [u, "Ubicación: " + u]));
+  sel.innerHTML = opts.map(([v, l]) => '<option value="' + esc(v) + '">' + esc(l) + '</option>').join("");
+  sel.value = opts.some(o => o[0] === cur) ? cur : "";
+  const n = countList(sel.value).length;
+  $("#cListMsg").textContent = sel.value ? n + " productos" : "";
+}
+$("#cListU").addEventListener("change", renderCountList);
+$("#cListAdd").addEventListener("click", () => {
+  const v = $("#cListU").value, list = countList(v); if (!list.length){ toast("No hay productos en esa lista"); return; }
+  for (const c of list) if (!S.draftC.has(c.p.k)) S.draftC.set(c.p.k, "");
+  if (v && !v.startsWith("__") && !$("#cUbic").value) $("#cUbic").value = v;
+  renderConteo(); toast(list.length + " productos pasados al conteo");
+});
+$("#cListCopy").addEventListener("click", async () => {
+  const v = $("#cListU").value, list = countList(v); if (!list.length){ toast("No hay productos en esa lista"); return; }
+  const title = v.startsWith("__") ? $("#cListU").selectedOptions[0].textContent : "Ubicación " + v;
+  const txt = "CONTEO · " + title + "\nFecha: ____  Contó: ____\n\n" + list.map(c => "• " + c.p.desc + (c.p.sku ? " (" + c.p.sku + ")" : "") + (v.startsWith("__") && S.ubic[c.p.k] ? " · " + S.ubic[c.p.k] : "") + ": ____").join("\n");
+  try { await navigator.clipboard.writeText(txt); toast("Lista copiada"); }
+  catch(e){ openDlg('<h2>Lista para contar</h2><textarea id="copyTa" readonly>' + esc(txt) + '</textarea><div class="row"><span class="spacer"></span><button class="btn" type="button" data-close>Cerrar</button></div>'); const ta = $("#copyTa"); ta.focus(); ta.select(); }
+});
+function renderConteo(){
+  if (!$("#cFecha").value) $("#cFecha").value = today();
+  if (!$("#cResp").value && document.activeElement !== $("#cResp")) $("#cResp").value = lsGet("inv.resp", "");
+  renderCountList();
+  const counts = latestCounts();
+  const rows = Array.from(S.draftC.entries());
+  $("#cItems").innerHTML = rows.length ? '<div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Conteo anterior</th><th class="n">Stock según la app</th><th class="n">Contaste</th><th></th></tr></thead><tbody>' +
+    rows.map(([k, v]) => { const p = S.byKey.get(k); const c = S.calc.get(k); const b = counts.get(k);
+      return '<tr><td><div class="pname">' + esc(p ? p.desc : k) + '</div><div class="sku">' + esc(p ? p.sku : "") + '</div></td><td class="n">' + (b ? fmtN(b.q) + ' <span class="muted">· ' + fmtD(b.d) + '</span>' : '<span class="muted">—</span>') + '</td><td class="n">' + fmtN(c ? c.stock : null) + '</td>' +
+      '<td class="n"><input class="qty" type="number" min="0" step="1" inputmode="numeric" id="cq-' + esc(k) + '" data-k="' + esc(k) + '" value="' + esc(v) + '" aria-label="Cantidad contada"></td><td><button class="btn sm" type="button" data-rm="' + esc(k) + '" aria-label="Quitar">Quitar</button></td></tr>'; }).join("") +
+    '</tbody></table></div>' : '<p class="muted">Busca productos arriba o pega una lista desde Excel.</p>';
+  $$("#cItems input[data-k]").forEach(i => i.addEventListener("input", () => { S.draftC.set(i.dataset.k, i.value); updCSave(); }));
+  $$("#cItems [data-rm]").forEach(b => b.onclick = () => { S.draftC.delete(b.dataset.rm); renderConteo(); });
+  updCSave();
+  // history
+  const hist = S.conteos.slice().sort((a, b) => (b.fecha + (b.creado || "")).localeCompare(a.fecha + (a.creado || "")));
+  $("#dlUbic").innerHTML = ubicList().map(u => '<option value="' + esc(u) + '"></option>').join("");
+  $("#dlResp").innerHTML = Array.from(new Set(S.conteos.map(c => c.resp).filter(Boolean))).map(r => '<option value="' + esc(r) + '"></option>').join("");
+  $("#cHist").innerHTML = hist.length ? '<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Ubicación</th><th>Contó</th><th>Nota</th><th class="n">Productos</th><th></th></tr></thead><tbody>' +
+    hist.map(c => '<tr><td>' + fmtD(c.fecha) + '</td><td>' + esc(c.ubic || "") + '</td><td>' + esc(c.resp || "") + '</td><td>' + esc(c.nota || "") + '</td><td class="n">' + fmtN(Object.keys(c.items || {}).length) + '</td><td class="n" data-del-wrap="' + esc(c.id) + '"><button class="btn sm danger" type="button" data-delc="' + esc(c.id) + '">Borrar</button></td></tr>').join("") + '</tbody></table></div>' : '<p class="muted">Aún no hay conteos guardados.</p>';
+  $$("#cHist [data-delc]").forEach(b => b.onclick = () => armDelete(b, () => S.db.doc("conteos/" + b.dataset.delc).delete().then(() => toast("Conteo borrado"))));
+}
+function armDelete(btn, fn){
+  const td = btn.parentElement;
+  td.innerHTML = '<span class="confirm">¿Borrar? <button class="btn sm danger" type="button">Sí</button><button class="btn sm" type="button">No</button></span>';
+  const [y, n] = $$("button", td);
+  y.onclick = async () => { try { await fn(); } catch(e){ toast(dbErrMsg(e), true); render(); } };
+  n.onclick = () => render();
+}
+function updCSave(){
+  const vals = Array.from(S.draftC.values());
+  $("#cSave").disabled = !vals.length || vals.some(v => v === "" || !isFinite(num(v)) || num(v) < 0);
+}
+async function saveConteo(fecha, nota, items, ubic, resp){
+  const id = newId();
+  try {
+    await S.db.doc("conteos/" + id).set({ fecha, nota: nota || "", ubic: ubic || "", resp: resp || "", items, creado: new Date().toISOString() });
+    if (resp) lsSet("inv.resp", resp);
+    if (ubic){ const upd = {}; for (const k in items) upd[k] = ubic; Object.assign(S.ubic, upd); await mergeEstado("ubicaciones", upd); }
+    toast("Conteo guardado: " + Object.keys(items).length + " productos");
+    return true;
+  } catch(e){ toast(dbErrMsg(e), true); return false; }
+}
+$("#cSave").addEventListener("click", async () => {
+  const fecha = $("#cFecha").value; if (!fecha){ toast("Pon la fecha del conteo", true); return; }
+  const items = {}; for (const [k, v] of S.draftC) items[k] = num(v);
+  $("#cSave").disabled = true;
+  if (await saveConteo(fecha, $("#cNota").value.trim(), items, $("#cUbic").value.trim(), $("#cResp").value.trim())){ S.draftC.clear(); $("#cNota").value = ""; renderConteo(); }
+  else updCSave();
+});
+
+/* ---------- entradas ---------- */
+bindPicker($("#ePicker"), k => { if (!S.draftE.has(k)) S.draftE.set(k, { q: "", c: (S.calc.get(k) || {}).cost ?? "" }); renderCompras(); const i = $('#eItems input[data-q="' + CSS.escape(k) + '"]'); if (i) i.focus(); });
+function renderCompras(){
+  if (!$("#eFecha").value) $("#eFecha").value = today();
+  const sal = isSalidaTipo($("#eTipo").value);
+  $("#eProvL").firstChild.textContent = sal ? "Destino / responsable" : "Proveedor / origen";
+  $("#eUpdCostL").hidden = sal;
+  const rows = Array.from(S.draftE.entries());
+  $("#eItems").innerHTML = rows.length ? '<div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Costo unit. ($)</th><th class="n">Total</th><th></th></tr></thead><tbody>' +
+    rows.map(([k, v]) => { const p = S.byKey.get(k); const t = num(v.q) * num(v.c);
+      return '<tr><td><div class="pname">' + esc(p ? p.desc : k) + '</div><div class="sku">' + esc(p ? p.sku : "") + '</div></td><td class="n"><input class="qty" type="number" min="0" step="1" id="eq-' + esc(k) + '" data-q="' + esc(k) + '" value="' + esc(v.q) + '" aria-label="Cantidad"></td><td class="n"><input class="cost" type="number" min="0" step="0.01" id="ec-' + esc(k) + '" data-c="' + esc(k) + '" value="' + esc(v.c) + '" aria-label="Costo unitario"></td><td class="n">' + (isFinite(t) ? fmtUSD(t) : '—') + '</td><td><button class="btn sm" type="button" data-rm="' + esc(k) + '">Quitar</button></td></tr>'; }).join("") +
+    '</tbody></table></div>' : '<p class="muted">Busca los productos o pega la lista desde Excel.</p>';
+  const updRow = (k, inp) => { const v = S.draftE.get(k); if (!v) return; const t = num(v.q) * num(v.c); const cell = inp.closest("tr").children[3]; cell.textContent = isFinite(t) ? fmtUSD(t) : "—"; $("#eSave").disabled = Array.from(S.draftE.values()).some(x => !(num(x.q) > 0)); };
+  $$("#eItems input[data-q]").forEach(i => i.addEventListener("input", () => { const v = S.draftE.get(i.dataset.q); if (v){ v.q = i.value; updRow(i.dataset.q, i); } }));
+  $$("#eItems input[data-c]").forEach(i => i.addEventListener("input", () => { const v = S.draftE.get(i.dataset.c); if (v){ v.c = i.value; updRow(i.dataset.c, i); } }));
+  $$("#eItems [data-rm]").forEach(b => b.onclick = () => { S.draftE.delete(b.dataset.rm); renderCompras(); });
+  $("#eSave").disabled = !rows.length || rows.some(([, v]) => !(num(v.q) > 0));
+  const hist = S.compras.slice().sort((a, b) => (b.fecha + (b.creado || "")).localeCompare(a.fecha + (a.creado || "")));
+  /* Aviso si lo mismo ya aparece en Ingresos/Egresos del Excel (±7 días, misma cantidad) */
+  const dupOf = c => {
+    const kind = isSalidaTipo(c.tipo) ? "egreso" : "ingreso", hits = [];
+    for (const it of (c.items || [])){
+      const s = ((S.calc.get(it.k) || {}).sales || []).find(s => s.kind === kind && Math.abs(dayDiff(s.d, c.fecha)) <= 7 && Math.abs(s.q - (+it.q || 0)) < 1e-9);
+      if (s) hits.push(((S.byKey.get(it.k) || {}).desc || it.k) + " (" + fmtD(s.d) + ")");
+    }
+    return hits;
+  };
+  $("#eHist").innerHTML = hist.length ? '<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Proveedor / destino</th><th>Productos</th><th class="n">Unidades</th><th class="n">Total</th><th></th></tr></thead><tbody>' +
+    hist.map(c => { const its = c.items || []; const u = its.reduce((s, i) => s + (+i.q || 0), 0); const t = its.reduce((s, i) => s + ((+i.q || 0) * (+i.c || 0)), 0);
+      const dup = dupOf(c);
+      return '<tr><td>' + fmtD(c.fecha) + '</td><td>' + (isSalidaTipo(c.tipo) ? '<span class="pill p-comprar">' : '<span class="pill p-ok">') + esc(TIPOS[c.tipo || "entrada"] || c.tipo) + '</span></td><td>' + esc(c.prov || "") + (c.nota ? '<div class="muted">' + esc(c.nota) + '</div>' : '') + (dup.length ? '<div class="neg">Puede estar repetido: ya aparece en Ingresos/Egresos: ' + esc(dup.join(", ")) + '. Si es lo mismo, borra este.</div>' : '') + '</td><td>' + its.slice(0, 3).map(i => esc((S.byKey.get(i.k) || {}).desc || i.k)).join(", ") + (its.length > 3 ? ' <span class="muted">+' + (its.length - 3) + '</span>' : '') + '</td><td class="n">' + fmtN(u) + '</td><td class="n">' + (t ? fmtUSD(t) : '—') + '</td><td class="n"><button class="btn sm danger" type="button" data-dele="' + esc(c.id) + '">Borrar</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="muted">Aún no hay movimientos registrados en la app.</p>';
+  $$("#eHist [data-dele]").forEach(b => b.onclick = () => armDelete(b, () => S.db.doc("compras/" + b.dataset.dele).delete().then(() => toast("Movimiento borrado"))));
+}
+$("#eTipo").addEventListener("change", renderCompras);
+$("#ePasteToggle").addEventListener("click", () => { $("#ePasteBox").hidden = !$("#ePasteBox").hidden; });
+$("#ePasteGo").addEventListener("click", () => {
+  const r = parsePaste($("#ePaste").value);
+  for (const [k, qv] of r.ok){ const cur = S.draftE.get(k); S.draftE.set(k, { q: String(qv + (cur ? (num(cur.q) || 0) : 0)), c: cur ? cur.c : ((S.calc.get(k) || {}).cost ?? "") }); }
+  $("#ePasteMsg").textContent = r.ok.length + " agregados" + (r.bad.length ? " · " + r.bad.length + " sin reconocer (quedan en la casilla para que los corrijas)" : "");
+  $("#ePaste").value = r.bad.join("\n");
+  renderCompras();
+});
+$("#eSave").addEventListener("click", async () => {
+  const fecha = $("#eFecha").value; if (!fecha){ toast("Pon la fecha", true); return; }
+  const tipo = $("#eTipo").value;
+  const items = []; const costUpd = {};
+  for (const [k, v] of S.draftE){ const q = num(v.q), c = num(v.c); items.push({ k, q, c: isFinite(c) ? c : null }); if (isFinite(c) && c > 0) costUpd[k] = c; }
+  $("#eSave").disabled = true;
+  try {
+    await S.db.doc("compras/" + newId()).set({ tipo, fecha, prov: $("#eProv").value.trim(), nota: $("#eNota").value.trim(), items, creado: new Date().toISOString() });
+    if (!isSalidaTipo(tipo) && $("#eUpdCost").checked && Object.keys(costUpd).length) await mergeEstado("costos", costUpd);
+    S.draftE.clear(); $("#eProv").value = ""; $("#eNota").value = ""; toast(TIPOS[tipo] + " guardada"); renderCompras();
+  } catch(e){ toast(dbErrMsg(e), true); renderCompras(); }
+});
+
+/* ---------- costos ---------- */
+function renderCostos(calcs){
+  if (S.ready.catalogo && !S.catalog.length){ $("#costTable").innerHTML = emptyCatalog(); $("#setupImport").onclick = importCatalog; return; }
+  const q = norm($("#qCost").value), f = S.f.cost;
+  let list = calcs.filter(c => matchQ(c, q));
+  if (f === "importa") list = list.filter(c => c.cost === null && ((c.stock || 0) > 0 || c.vel > 0));
+  else if (f === "sincosto") list = list.filter(c => c.cost === null);
+  list.sort((a, b) => (b.vel - a.vel) || ((b.stock || 0) - (a.stock || 0)) || a.p.desc.localeCompare(b.p.desc));
+  const byCode = new Map(); for (const p of S.catalog){ if (p.code) byCode.set(p.code, (byCode.get(p.code) || 0) + 1); }
+  const shown = list.slice(0, S.lim.cost);
+  const HOW = { exacto: "mismo nombre", producto: "producto base", variantes: "otras tallas/colores" };
+  const gl = S.glos ? (S.glosCost.size + ' productos del catálogo tienen costo en el glosario.') : (S.glosErr ? 'No se pudo leer el glosario de finanzas.' : 'Leyendo el glosario de finanzas…');
+  $("#costTable").innerHTML = '<p class="muted">' + list.length + ' productos · ' + gl + '</p><div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Stock</th><th class="n">Vendido ' + S.cfg.diasVentas + 'd</th><th class="n">Glosario</th><th class="n">Tu costo ($)</th><th></th></tr></thead><tbody>' +
+    (shown.length ? shown.map(c => { const nv = byCode.get(c.p.code) || 0;
+      return '<tr><td><div class="pname">' + esc(c.p.desc) + '</div><div class="sku">' + esc(c.p.sku) + '</div></td><td class="n">' + fmtN(c.stock) + '</td><td class="n">' + fmtN(c.vel) + '</td>' +
+      '<td class="n">' + (c.g ? fmtUSD(c.g.c) + '<div class="sku">' + HOW[c.g.how] + '</div>' : '<span class="muted">no está</span>') + '</td>' +
+      '<td class="n"><input class="cost" type="number" min="0" step="0.01" id="cc-' + esc(c.p.k) + '" data-cost="' + esc(c.p.k) + '" value="' + (c.manual !== null ? esc(c.manual) : '') + '" placeholder="' + (c.g ? esc(c.g.c) : '') + '" aria-label="Costo unitario propio"></td>' +
+      '<td>' + (nv > 1 && c.manual !== null ? '<button class="btn sm" type="button" data-var="' + esc(c.p.k) + '" title="Mismo costo para todas las tallas y colores">A las ' + nv + ' variantes</button>' : '') + '</td></tr>'; }).join("")
+      : '<tr><td colspan="6"><div class="empty">' + (f === "importa" ? '<strong>Todo lo que tiene stock o ventas ya tiene costo</strong>' : 'Ningún producto con este filtro.') + '</div></td></tr>') +
+    '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="moreCost">Ver ' + Math.min(PAGE, list.length - shown.length) + ' más</button>' : '');
+  const mb = $("#moreCost"); if (mb) mb.onclick = () => { S.lim.cost += PAGE; render(); };
+  $$("#costTable input[data-cost]").forEach(i => i.addEventListener("change", () => i.isConnected && setCost({ [i.dataset.cost]: i.value === "" ? null : num(i.value) })));
+  $$("#costTable [data-var]").forEach(b => b.onclick = () => { const src = S.byKey.get(b.dataset.var); const v = S.costs[src.k]; const upd = {}; for (const p of S.catalog) if (p.code === src.code) upd[p.k] = v; setCost(upd, "Costo aplicado a " + Object.keys(upd).length + " variantes"); });
+}
+async function setCost(upd, msg){
+  for (const k in upd){ if (upd[k] !== null && (!isFinite(upd[k]) || upd[k] < 0)){ toast("El costo debe ser un número mayor o igual a 0", true); return; } }
+  Object.assign(S.costs, upd); recompute(); setTimeout(render, 0);
+  try { await mergeEstado("costos", upd); toast(msg || "Costo guardado"); } catch(e){ toast(dbErrMsg(e), true); }
+}
+
+/* ---------- vincular ---------- */
+function renderVinc(){
+  const list = S.unmatched;
+  $("#vincTable").innerHTML = !S.sales ? '<div class="panel"><div class="empty"><strong>Esperando las ventas</strong></div></div>' : list.length ? '<div class="tbl-wrap"><table><thead><tr><th>Nombre en Ventas</th><th class="n">Unidades</th><th>Tiendas</th><th class="n">Última venta</th><th>Es el producto…</th><th></th></tr></thead><tbody>' +
+    list.map((u, i) => '<tr><td><div class="pname">' + esc(u.name) + '</div><div class="sku">' + esc(Array.from(u.src).join(", ")) + '</div></td><td class="n">' + fmtN(u.q) + '</td><td>' + esc(Array.from(u.t).join(", ")) + '</td><td class="n">' + fmtD(u.last) + '</td>' +
+      '<td><input list="dlProd" id="vi-' + esc(encKey(u.nm)) + '" data-i="' + i + '" data-nm="' + esc(u.nm) + '" placeholder="Escribe para buscar" style="width:min(320px,60vw)" aria-label="Producto del catálogo"></td><td class="n"><button class="btn sm" type="button" data-ign="' + i + '">No es producto</button></td></tr>').join("") + '</tbody></table></div>'
+    : '<div class="panel"><div class="empty"><strong>Todos los nombres de Ventas están vinculados</strong><p>Cada venta del período ya descuenta de un producto.</p></div></div>';
+  $$("#vincTable input[data-i]").forEach(inp => inp.addEventListener("change", () => {
+    const u = S.unmatched.find(x => x.nm === inp.dataset.nm); const v = inp.value;
+    if (!u || !inp.isConnected || !v) return;
+    const p = S.catalog.find(x => (x.sku + " — " + x.desc) === v);
+    if (!p){ toast("Elige un producto de la lista", true); return; }
+    setAlias({ [u.nm]: p.k }, '"' + u.name + '" → ' + p.desc);
+  }));
+  $$("#vincTable [data-ign]").forEach(b => b.onclick = () => { const u = S.unmatched[+b.dataset.ign]; if (!u) return; setAlias({ [u.nm]: IGN }, '"' + u.name + '" ignorado'); });
+  const al = Object.entries(S.alias).filter(([, v]) => v);
+  $("#aliasList").innerHTML = al.length ? '<div class="tbl-wrap"><table><thead><tr><th>Nombre en Ventas</th><th>Producto</th><th></th></tr></thead><tbody>' +
+    al.map(([nm, k]) => '<tr><td>' + esc(nm) + '</td><td>' + (k === IGN ? '<span class="muted">No es producto</span>' : esc((S.byKey.get(k) || {}).desc || k)) + '</td><td class="n"><button class="btn sm" type="button" data-unal="' + esc(nm) + '">Quitar</button></td></tr>').join("") + '</tbody></table></div>' : '<p class="muted">Ninguno todavía.</p>';
+  $$("#aliasList [data-unal]").forEach(b => b.onclick = () => setAlias({ [b.dataset.unal]: null }, "Vínculo quitado"));
+}
+async function setAlias(upd, msg){
+  Object.assign(S.alias, upd); S.aliasVer = (S.aliasVer || 0) + 1; recompute(); setTimeout(render, 0);
+  try { await mergeEstado("alias", upd); toast(msg); } catch(e){ toast(dbErrMsg(e), true); }
+}
+
+/* ---------- ajustes ---------- */
+function renderAjustes(){
+  const c = S.cfg;
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-view="ajustes"] .panel')) {} else {
+    $("#sDV").value = c.diasVentas; $("#sDE").value = c.diasEntrega; $("#sDC").value = c.diasCobertura; $("#sMayor").checked = c.mayorEnCompras !== false;
+  }
+  $("#catInfo").textContent = S.catMeta ? S.catMeta.total + " productos · actualizado el " + new Date(S.catMeta.at).toLocaleString("es-VE") : "Aún no se ha traído el catálogo.";
+}
+$("#cuaMode").addEventListener("change", async e => {
+  const cfg = { ...S.cfg, cuadreModo: e.target.value }; S.cfg = cfg; S.lim.cua = PAGE; render();
+  if (e.target.value !== "ini26" && !HIST.y25) load25(false);
+  try { await enqueue("estado/config", () => S.db.doc("estado/config").set(cfg)); } catch(err){ toast(dbErrMsg(err), true); }
+});
+$("#sSave").addEventListener("click", async () => {
+  const dv = Math.round(num($("#sDV").value)), de = Math.round(num($("#sDE").value)), dc = Math.round(num($("#sDC").value));
+  if (!(dv >= 7 && dv <= 120) || !(de >= 0 && de <= 180) || !(dc >= 0 && dc <= 180)){ toast("Revisa los días: ventas entre 7 y 120, los otros entre 0 y 180", true); return; }
+  const cfg = { ...S.cfg, diasVentas: dv, diasEntrega: de, diasCobertura: dc, mayorEnCompras: $("#sMayor").checked };
+  const reload = cfg.diasVentas > S.cfg.diasVentas;
+  S.cfg = cfg; recompute(); render();
+  try { await enqueue("estado/config", () => S.db.doc("estado/config").set(cfg)); toast("Ajustes guardados"); if (reload) loadSales(false); } catch(e){ toast(dbErrMsg(e), true); }
+});
+
+/* ---------- detalle ---------- */
+function openDlg(html){ $("#dlgBody").innerHTML = html; const d = $("#dlg"); if (!d.open) d.showModal(); }
+$("#dlg").addEventListener("click", e => { if (e.target.id === "dlg" || e.target.closest("[data-close]")) $("#dlg").close(); });
+document.addEventListener("click", e => {
+  const tr = e.target.closest("tr.click[data-k]"); if (!tr || e.target.closest("input,button")) return;
+  H.k = tr.dataset.k; H.only = false; H.lim = 200; renderHistory();
+});
+const H = { k: null, only: false, lim: 200, loading: false, err: null };
+function movLabel(s){
+  if (s.kind === "venta") return "Venta · " + (s.est || "sin estado");
+  if (s.kind === "csale" || s.kind === "cvuelve") return KIND_LABEL[s.kind] + " · " + (s.est || "sin estado") + (s.averia ? " · avería" : "");
+  return KIND_LABEL[s.kind] || s.kind;
+}
+function histEvents(k){
+  const ev = [];
+  for (const c of S.conteos){ const it = c.items || {}; if (it[k] !== undefined && it[k] !== null) ev.push({ d: c.fecha, o: 9, sub: c.creado || "", type: "conteo", q: +it[k], label: +it[k] === 0 ? "Conteo físico: no queda" : "Conteo físico", det: [c.resp ? "contó " + c.resp : "", c.ubic, c.nota].filter(Boolean).join(" · ") }); }
+  for (const c of S.compras){ for (const it of (c.items || [])) if (it.k === k){ const sal = isSalidaTipo(c.tipo); ev.push({ d: c.fecha, o: 1, sub: c.creado || "", type: "app", eff: sal ? -(+it.q || 0) : (+it.q || 0), q: +it.q || 0, label: TIPOS[c.tipo || "entrada"], det: [c.prov, c.nota, "registrado en la app"].filter(Boolean).join(" · ") }); } }
+  const sheetMov = (S.calc.get(k) || {}).sales || [];
+  const ventasFull = S.fullVentas ? S.fullVentas.filter(s => { const kk = resolveName(norm(s.name)); return kk === k; }) : null;
+  for (const s of sheetMov){
+    if (ventasFull && s.kind === "venta") continue;
+    ev.push(sheetEv(s));
+  }
+  if (ventasFull) for (const s of ventasFull) ev.push(sheetEv(s));
+  ev.sort((x, y) => x.d.localeCompare(y.d) || (x.o - y.o) || String(x.sub).localeCompare(String(y.sub)));
+  return ev;
+}
+function sheetEv(s){
+  let eff = 0, note = "";
+  if (isComing(s)) note = "en camino (fecha futura)";
+  else if (isOut(s)) eff = -s.q;
+  else if (isIn(s)) eff = s.q;
+  else if (isRes(s)) note = "reservado";
+  else note = "no mueve stock";
+  const det = [s.t && s.t !== "GENERAL" ? s.t : "", s.ord ? "orden " + s.ord : "", s.who || ""].filter(Boolean).join(" · ") + " · " + (s.sh || SRC_LABEL[s.kind]) + " fila " + s.row;
+  return { d: s.d, o: 2, sub: String(s.row).padStart(7, "0"), type: "hoja", eff, q: s.q, note, label: movLabel(s), det };
+}
+function renderHistory(){
+  const c = S.calc.get(H.k); if (!c) return;
+  const ev = histEvents(H.k);
+  const vFrom = S.fullVentas ? "0000" : (S.salesInfo ? S.salesInfo.from : "9999");
+  let bal = null, started = false;
+  for (const e of ev){
+    if (e.type === "conteo"){
+      if (!started && e.d >= vFrom) started = true;
+      if (started){ e.diff = bal === null ? null : e.q - bal; bal = e.q; e.bal = bal; }
+      continue;
+    }
+    if (started && bal !== null && e.eff){ bal += (e.eff || 0); }
+    e.bal = started ? bal : null;
+  }
+  let list = ev.slice().reverse();
+  if (H.only) list = list.filter(e => e.type === "conteo" || e.eff);
+  const shown = list.slice(0, H.lim);
+  const qtyCell = e => {
+    if (e.type === "conteo") return '<b>= ' + fmtN(e.q) + '</b>';
+    if (e.eff > 0) return '<b style="color:var(--ok)">+' + fmtN(e.eff, e.eff % 1 ? 1 : 0) + '</b>';
+    if (e.eff < 0) return '<b>−' + fmtN(-e.eff, e.eff % 1 ? 1 : 0) + '</b>';
+    return '<span class="muted">(' + fmtN(e.q, e.q % 1 ? 1 : 0) + ') ' + esc(e.note) + '</span>';
+  };
+  const diffTxt = e => e.diff === null || e.diff === undefined ? '' : (e.diff === 0 ? '<div class="sku" style="color:var(--ok)">cuadró exacto con la app</div>' : '<div class="sku" style="color:' + (e.diff < 0 ? 'var(--crit)' : 'var(--warn)') + '">' + (e.diff > 0 ? 'sobraron ' : 'faltaron ') + fmtN(Math.abs(e.diff)) + ' vs lo que calculaba la app</div>');
+  const ventasNote = S.fullVentas ? '<div class="row"><p class="muted" style="flex:1 1 240px">Incluye todo el historial desde ' + fmtD(HIST.from) + '.</p>' + (HIST.y25 ? '' : '<button class="btn sm" type="button" id="h25"' + (HIST.loading25 ? ' disabled' : '') + '>' + (HIST.loading25 ? 'Cargando 2025…' : 'Cargar también 2025') + '</button>') + '</div>'
+    : '<div class="row"><p class="muted" style="flex:1 1 240px">Las ventas de la hoja Ventas se muestran desde el ' + fmtD(S.salesInfo ? S.salesInfo.from : "") + '. Al mayor, cambios e ingresos de julio en adelante aparecen completos.</p><button class="btn sm" type="button" id="hFull"' + (HIST.loading ? ' disabled' : '') + '>' + (HIST.loading ? 'Cargando…' : 'Cargar todo el historial') + '</button></div>' + (HIST.err ? '<p class="neg">' + esc(HIST.err) + '</p>' : '');
+  openDlg('<div class="row"><div><h2>' + esc(c.p.desc) + '</h2><div class="sku">' + esc(c.p.sku) + '</div></div><span class="spacer"></span>' + pill(c.st) + '</div>' +
+    '<div class="row"><label class="f" style="flex:1 1 200px">Ubicación<input type="text" id="hUbic" list="dlUbic" value="' + esc(S.ubic[c.p.k] || "") + '" placeholder="Ej. Hilera 3"></label>' +
+    '<label class="f">Ya no queda: fecha<input type="date" id="hZeroD" value="' + today() + '"></label><button class="btn" type="button" id="hZero" style="align-self:flex-end">Ya no hay más (contar 0)</button></div>' +
+    '<div class="facts"><div class="fact"><span>Último conteo</span><b>' + (c.base ? fmtN(c.base.q) : '—') + '</b><span>' + (c.base ? fmtD(c.base.d) : 'sin conteo') + '</span></div>' +
+    (c.est !== null ? '<div class="fact"><span>Estimado sin conteo</span><b>≈ ' + fmtN(c.est) + '</b><span>desde stock inicial ' + fmtD(c.estIni.d) + '</span></div>' : '') +
+    '<div class="fact"><span>+ Entradas</span><b>' + fmtN(c.inn) + '</b></div><div class="fact"><span>− Salidas</span><b>' + fmtN(c.out) + '</b></div>' +
+    '<div class="fact"><span>Stock</span><b class="' + ((c.stock ?? 0) < 0 ? 'neg' : '') + '">' + fmtN(c.stock) + '</b></div><div class="fact"><span>Reservado</span><b>' + fmtN(c.res) + '</b></div>' +
+    '<div class="fact"><span>Vendido ' + S.cfg.diasVentas + 'd</span><b>' + fmtN(c.vel) + '</b></div><div class="fact"><span>Dura</span><b>' + diasTxt(c.dias) + '</b></div><div class="fact"><span>Comprar</span><b>' + fmtN(c.sug) + '</b></div>' + (c.coming ? '<div class="fact"><span>En camino</span><b>' + fmtN(c.coming) + '</b><span>ingreso con fecha futura</span></div>' : '') +
+    '<div class="fact"><span>Costo</span><b>' + (c.cost !== null ? fmtUSD(c.cost) : '—') + '</b><span>' + (c.manual !== null ? 'tu costo' : (c.g ? 'glosario' : 'sin costo')) + '</span></div></div>' +
+    (Object.keys(c.velT).length ? '<div><h3>Por tienda · últimos ' + S.cfg.diasVentas + ' días</h3><p>' + Object.entries(c.velT).sort((a, b) => b[1] - a[1]).map(([t, q]) => esc(t) + ': <b>' + fmtN(q) + '</b>').join(' · ') + '</p></div>' : '') +
+    '<div class="row"><h3>Historial</h3><span class="spacer"></span><div class="chips"><button class="chip" type="button" data-h="0" aria-pressed="' + !H.only + '">Todo</button><button class="chip" type="button" data-h="1" aria-pressed="' + H.only + '">Solo lo que mueve stock</button></div></div>' + ventasNote +
+    (shown.length ? '<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Detalle</th><th class="n">Cantidad</th><th class="n">Stock</th></tr></thead><tbody>' +
+      shown.map(e => '<tr' + (e.type === "conteo" ? ' style="background:var(--accent-soft)"' : '') + '><td style="white-space:nowrap">' + fmtD(e.d) + '</td><td>' + esc(e.label) + diffTxt(e) + '</td><td class="muted" style="font-size:12px">' + esc(e.det) + '</td><td class="n">' + qtyCell(e) + '</td><td class="n">' + (e.bal === null || e.bal === undefined ? '<span class="muted">—</span>' : '<span class="' + (e.bal < 0 ? 'neg' : '') + '">' + fmtN(e.bal) + '</span>') + '</td></tr>').join("") +
+      '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="hMore">Ver ' + Math.min(200, list.length - shown.length) + ' más</button>' : '')
+      : '<p class="muted">Este producto no tiene movimientos registrados.</p>') +
+    '<p class="note">La columna Stock arranca en el primer conteo y se recalcula con cada movimiento. En cada conteo ves cuánto faltó o sobró frente a lo que calculaba la app.</p>' +
+    '<div class="row"><button class="btn" type="button" id="dlgCount">Agregar a un conteo</button><span class="spacer"></span><button class="btn" type="button" data-close>Cerrar</button></div>');
+  $("#dlgCount").onclick = () => { if (!S.draftC.has(c.p.k)) S.draftC.set(c.p.k, ""); $("#dlg").close(); showView("conteo"); };
+  $$("#dlgBody [data-h]").forEach(b => b.onclick = () => { H.only = b.dataset.h === "1"; H.lim = 200; renderHistory(); });
+  const hm = $("#hMore"); if (hm) hm.onclick = () => { H.lim += 200; renderHistory(); };
+  const hf = $("#hFull"); if (hf) hf.onclick = () => loadHist(false);
+  const h25 = $("#h25"); if (h25) h25.onclick = () => load25(false);
+  $("#hUbic").onchange = () => setUbic({ [c.p.k]: $("#hUbic").value.trim() || null });
+  $("#hZero").onclick = async () => { const d = $("#hZeroD").value; if (!d){ toast("Pon la fecha", true); return; } $("#hZero").disabled = true; if (await saveConteo(d, "ya no hay más", { [c.p.k]: 0 }, S.ubic[c.p.k] || "", lsGet("inv.resp", ""))) $("#dlg").close(); else $("#hZero").disabled = false; };
+}
+async function setUbic(upd){
+  for (const k in upd){ if (upd[k]) S.ubic[k] = upd[k]; else delete S.ubic[k]; }
+  render();
+  try { await mergeEstado("ubicaciones", upd); toast("Ubicación guardada"); } catch(e){ toast(dbErrMsg(e), true); }
+}
+function ubicList(){ return Array.from(new Set(Object.values(S.ubic).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es", { numeric: true })); }
+/* ---------- historial completo + cuadre ---------- */
+const HIST = { loading: false, err: null, from: null, y25: false, loading25: false, err25: null, stats: [], stats25: [] };
+function statOf(src, arr){ let a = "9999", b = ""; for (const s of arr){ if (s.d < a) a = s.d; if (s.d > b) b = s.d; } return { src, n: arr.length, from: arr.length ? a : "", to: b }; }
+async function readRows(id, sheet, c1, c2, r0, last, fresh){
+  const out = [], CH = 4000;
+  for (let a = r0; a <= last; a += CH){
+    const b = Math.min(last, a + CH - 1);
+    const v = await getValues(id, "'" + sheet + "'!" + c1 + a + ":" + c2 + b, fresh);
+    for (let i = 0; i <= b - a; i++) out.push(v[i] || []);
+  }
+  return out;
+}
+async function loadVentasSheet(id, sheet, fresh){
+  const dates = await getValues(id, "'" + sheet + "'!D2:D", fresh);
+  const last = 1 + dates.length; if (last < 2) return [];
+  const [rows, prod] = await Promise.all([readRows(id, sheet, "B", "F", 2, last, fresh), readRows(id, sheet, "H", "K", 2, last, fresh)]);
+  return parseVentas(rows, prod, 2).map(s => (s.sh = sheet, s));
+}
+/* Valencia y Barquisimeto: salen del almacén de Caracas (Anakarina, 24/11/2026). Columnas B orden, D fecha, E estado, F tienda, H producto, J cantidad */
+async function loadValBarqui(fresh){
+  const rows = await getValues(SRC.ventas.id, "'" + SRC.ventas.valbar + "'!B2:J", fresh);
+  const out = [];
+  rows.forEach((r, i) => { const d = parseDMY(r[2]); const name = String(r[6] ?? "").trim(); if (!d || !name) return; let q = num(r[8]); if (!isFinite(q)) q = 1;
+    out.push({ kind: "venta", d, est: norm(r[3]), t: norm(r[4]) || "SIN TIENDA", name, q, ord: String(r[0] ?? "").trim(), row: i + 2, sh: SRC.ventas.valbar, vb: true }); });
+  return out;
+}
+function parseMayor(rows, sh, out, fy){
+  rows.forEach((r, i) => { const d = parseDMY(r[0], fy); const name = String(r[2] ?? "").trim(); if (!d || !name) return; let qq = num(r[3]); if (!isFinite(qq)) qq = 1;
+    out.push({ kind: "mayor", d, est: "AL MAYOR", t: MAYOR, name, q: qq, who: String(r[1] ?? "").trim(), row: i + 2, sh }); });
+}
+function parseCyr(rows, sh, out, fy, r0){
+  r0 = r0 || 3;
+  rows.forEach((r, i) => { const d = parseDMY(r[0], fy); if (!d) return; const est = norm(r[4]), t = norm(r[2]) || "SIN TIENDA", averia = String(r[5]).toUpperCase() === "TRUE";
+    const back = String(r[6] ?? "").trim(), out2 = String(r[8] ?? "").trim();
+    if (back){ let qq = num(r[7]); if (!isFinite(qq)) qq = 1; out.push({ kind: "cvuelve", d, est, t, name: back, q: qq, averia, row: i + r0, sh }); }
+    if (out2){ let qq = num(r[9]); if (!isFinite(qq)) qq = 1; out.push({ kind: "csale", d, est, t, name: out2, q: qq, row: i + r0, sh }); } });
+}
+async function loadHist(fresh){
+  if (HIST.loading || !S.mcp) return;
+  HIST.loading = true; HIST.err = null; render(); if ($("#dlg").open && H.k) renderHistory();
+  try {
+    const q = s => "'" + s + "'!";
+    const [vJul, vEJ, mEJ, cEJ, ini, vVB] = await Promise.all([
+      loadVentasSheet(SRC.ventas.id, SRC.ventas.sheet, fresh),
+      loadVentasSheet(SRC.inv.id, SRC.inv.ventasEJ, fresh),
+      getValues(SRC.inv.id, q(SRC.inv.mercEJ) + "C2:F", fresh),
+      getValues(SRC.inv.id, q(SRC.inv.cyrEJ) + "A3:J", fresh),
+      getValues(SRC.inv.id, q(SRC.inv.sheet) + "A2:D", fresh).catch(() => null),
+      loadValBarqui(fresh).catch(() => [])
+    ]);
+    /* Ventas ene-jun (copia en el Excel de inventario) + despacho actual; lo repetido en las dos se cuenta una vez */
+    const key = s => s.ord + "|" + norm(s.name) + "|" + s.d + "|" + s.q;
+    const seen = new Set(vEJ.map(key));
+    const vJulOk = vJul.filter(s => !seen.has(key(s)));
+    const m26 = [], c26 = [];
+    parseMayor(mEJ, SRC.inv.mercEJ, m26, 2026);
+    parseCyr(cEJ, SRC.inv.cyrEJ, c26, 2026, 3);
+    const out = vJulOk.concat(vEJ, m26, c26, vVB);
+    const sOf = k => (S.sales || []).filter(s => s.kind === k);
+    HIST.stats = [statOf("Ventas ene–jun 2026 (Excel inventario 2026)", vEJ), statOf("Ventas despacho actual (jul 2026 →)", vJulOk), statOf("Ventas Valencia y Barquisimeto (salen de Caracas)", vVB), statOf("Al mayor ene–jun 2026", m26), statOf("Al mayor despacho actual", sOf("mayor")),
+      statOf("Cambios ene–jun 2026", c26), statOf("Cambios despacho actual", sOf("csale").concat(sOf("cvuelve"))), statOf("Ingresos/Egresos 2026", sOf("ingreso").concat(sOf("egreso")))]
+      .concat(vJul.length - vJulOk.length ? [{ src: "Ventas repetidas entre las dos hojas (contadas una vez)", n: vJul.length - vJulOk.length, from: "", to: "" }] : []);
+    if (ini){
+      const bySku = new Map(); for (const p of S.catalog) if (p.ns && !bySku.has(p.ns)) bySku.set(p.ns, p.k);
+      const m = {};
+      for (const r of ini){ const k = bySku.get(norm(r[0])); const d = parseDMY(r[2]); const qv = num(r[3]); if (k && d && isFinite(qv) && !m[k]) m[k] = { q: qv, d }; }
+      S.inicial = m;
+    }
+    const all = S.full25 ? out.concat(S.full25) : out;
+    let mn = "9999"; for (const s of all) if (s.d < mn) mn = s.d; for (const s of (S.sales || [])) if (s.d < mn) mn = s.d;
+    S.fullVentas = all; HIST.from = mn;
+    if (S.full25) HIST.stats = HIST.stats.concat(HIST.stats25);
+  } catch(e){ HIST.err = mcpErrText(e).t; }
+  finally { HIST.loading = false; recompute(); render(); if ($("#dlg").open && H.k) renderHistory(); }
+}
+/* 2025: solo para el cuadre "desde cero" o "conteo de 2025" y el historial de cada producto */
+async function load25(fresh){
+  if (HIST.loading25 || !S.mcp) return;
+  HIST.loading25 = true; HIST.err25 = null; render(); if ($("#dlg").open && H.k) renderHistory();
+  try {
+    while (HIST.loading) await new Promise(r => setTimeout(r, 300));
+    if (!S.fullVentas) await loadHist(fresh);
+    const Y = SRC.y25, q = s => "'" + s + "'!";
+    const [v25, cy, m1, m2, ie, st] = await Promise.all([
+      loadVentasSheet(Y.ventas, "Ventas", fresh),
+      getValues(Y.ventas, q("CAMBIOS Y REEMBOLSOS") + "A2:J", fresh),
+      getValues(Y.ventas, q("MERCANCÍA") + "B2:E", fresh),
+      getValues(Y.ventas, q("MERCANCIA - NUEVO") + "C2:F", fresh),
+      getValues(Y.inv, q("Ingresos/Egresos") + "B2:G", fresh),
+      getValues(Y.inv, q("Stock de Productos") + "A2:D", fresh).catch(() => null)
+    ]);
+    const ven = v25.filter(s => s.d <= CUT.fin25).map(s => (s.sh = "Ventas 2025", s));
+    const cyr = []; parseCyr(cy, "Cambios 2025", cyr, 2025, 2);
+    const may = [], mayN = [];
+    parseMayor(m1, "Al mayor 2025 (MERCANCÍA)", may, 2025);
+    parseMayor(m2, "Al mayor 2025 (MERCANCIA - NUEVO)", mayN, 2025);
+    const ies = [];
+    ie.forEach((r, i) => { const d = parseDMY(r[0], 2025); const name = String(r[3] ?? "").trim(); const tipo = norm(r[4]); if (!d || d > CUT.fin25 || !name || (tipo !== "INGRESO" && tipo !== "EGRESO")) return; const qq = num(r[5]); if (!isFinite(qq)) return;
+      ies.push({ kind: tipo === "INGRESO" ? "ingreso" : "egreso", d, est: tipo, t: norm(r[1]) || "GENERAL", name, q: qq, who: String(r[2] ?? "").trim(), row: i + 2, sh: "Ingresos/Egresos 2025" }); });
+    const cyrOk = cyr.filter(s => s.d <= CUT.fin25), mayOk = may.filter(s => s.d <= CUT.mayorViejoHasta), mayNOk = mayN.filter(s => s.d >= CUT.mayorNuevoDesde && s.d <= CUT.fin25);
+    if (st){
+      const bySku = new Map(); for (const p of S.catalog) if (p.ns && !bySku.has(p.ns)) bySku.set(p.ns, p.k);
+      const m = {};
+      for (const r of st){ const k = bySku.get(norm(r[0])) || resolveName(norm(r[1])); const d = parseDMY(r[2]); const qv = num(r[3]); if (k && k !== IGN && d && isFinite(qv) && !m[k]) m[k] = { q: qv, d }; }
+      S.inicial25 = m;
+    }
+    S.full25 = ven.concat(cyrOk, mayOk, mayNOk, ies);
+    HIST.stats25 = [statOf("Ventas 2025 (NEW DESPACHO CARACAS)", ven), statOf("Cambios 2025", cyrOk), statOf("Al mayor 2025 (MERCANCÍA, hasta 05/09)", mayOk), statOf("Al mayor 2025 (MERCANCIA - NUEVO, desde 06/09)", mayNOk), statOf("Ingresos/Egresos 2025", ies)];
+    HIST.y25 = true;
+    while (HIST.loading) await new Promise(r => setTimeout(r, 300));
+    S.fullVentas = null; await loadHist(false);
+  } catch(e){ HIST.err25 = mcpErrText(e).t; }
+  finally { HIST.loading25 = false; recompute(); render(); if ($("#dlg").open && H.k) renderHistory(); }
+}
+let byKCache = { fv: null, av: -1, cat: null, map: new Map() };
+function histByK(){
+  if (byKCache.fv === S.fullVentas && byKCache.av === S.aliasVer && byKCache.cat === S.catalog) return byKCache.map;
+  const m = new Map();
+  for (const s of (S.fullVentas || [])){ const k = resolveName(norm(s.name)); if (!k || k === IGN) continue; let a = m.get(k); if (!a){ a = []; m.set(k, a); } a.push(s); }
+  byKCache = { fv: S.fullVentas, av: S.aliasVer, cat: S.catalog, map: m };
+  return m;
+}
+function outLabel(s){
+  if (s.kind === "venta") return s.vb ? "Ventas Valencia y Barquisimeto" : "Ventas despacho Caracas";
+  if (s.kind === "mayor") return "Ventas al mayor";
+  if (s.kind === "csale") return "Cambios: lo que sale";
+  const w = norm(s.who);
+  if (w.includes("DROPANA")) return "Envíos a DroPanas";
+  if (w.includes("MARACAIBO")) return "Envíos a Maracaibo";
+  return "Egresos: " + (s.who || "sin origen");
+}
+function inLabel(s){ return s.kind === "cvuelve" ? "Cambios: lo que vuelve" : "Ingresos: " + (s.who || "sin origen"); }
+function cuaMode(){ return S.cfg.cuadreModo || "ini26"; }
+const MODE_TXT = { ini26: "conteo del 01/01/2026 (Excel inventario 2026)", ini25: "conteo de 2025 (Excel inventario 2025, cada producto con su fecha)", cero: "cero: todo lo anotado desde 2025" };
+function cuadreFor(k, byK){
+  const c = S.calc.get(k); const base = c && c.base; if (!base) return null;
+  const mode = cuaMode();
+  let ini = null, from = "2025-01-01";
+  if (mode === "ini26"){ ini = S.inicial ? (S.inicial[k] || null) : null; from = ini ? ini.d : "2026-01-01"; }
+  else if (mode === "ini25"){ ini = S.inicial25 ? (S.inicial25[k] || null) : null; from = ini ? ini.d : "2025-01-01"; }
+  /* El conteo de partida vale ese día: los movimientos cuentan desde el día siguiente */
+  const inRange = d => d <= base.d && (ini ? d > from : d >= from);
+  const ing = new Map(), sal = new Map(); let tin = 0, tout = 0, firstIn = null, firstOut = null;
+  const add = (m, l, q) => m.set(l, (m.get(l) || 0) + q);
+  const movs = (byK.get(k) || []).concat(c.sales.filter(s => s.kind !== "venta"));
+  for (const s of movs){
+    const o = isOut(s), i = !o && isIn(s);
+    if (o && s.q > 0 && (!firstOut || s.d < firstOut)) firstOut = s.d;
+    if (i && s.kind === "ingreso" && (!firstIn || s.d < firstIn)) firstIn = s.d;
+    if (!inRange(s.d)) continue;
+    if (o){ tout += s.q; add(sal, outLabel(s), s.q); }
+    else if (i){ tin += s.q; add(ing, inLabel(s), s.q); }
+  }
+  for (const cm of S.compras) for (const it of (cm.items || [])){
+    if (it.k !== k) continue;
+    const q = +it.q || 0, sl = isSalidaTipo(cm.tipo);
+    if (!sl && (!firstIn || cm.fecha < firstIn)) firstIn = cm.fecha;
+    if (!inRange(cm.fecha)) continue;
+    if (sl){ tout += q; add(sal, TIPOS[cm.tipo] + " (app)", q); } else { tin += q; add(ing, "Entradas registradas en la app", q); }
+  }
+  /* Historia completa: con 2025 cargado, su primera entrada es posterior al 23/04/2025 y nada salió antes de esa entrada */
+  const completa = HIST.y25 ? !!firstIn && firstIn >= CUT.entradas25 && (!firstOut || firstIn <= firstOut) : null;
+  const start = ini ? ini.q : 0, calc = start + tin - tout;
+  return { k, c, base, ini, start, from, mode, tin, tout, calc, diff: base.q - calc, ing, sal, completa };
+}
+const cuaPill = r => Math.abs(r.diff) < 1e-9 ? '<span class="pill p-ok">Cuadra</span>' : (r.diff < 0 ? '<span class="pill p-revisar">Faltan ' + fmtN(-r.diff) + '</span>' : '<span class="pill p-comprar">Sobran ' + fmtN(r.diff) + '</span>');
+function renderCuadre(){
+  const mode = cuaMode(); $("#cuaMode").value = mode;
+  if (!S.fullVentas && !HIST.loading && !HIST.err && S.mcp && S.sales) setTimeout(() => loadHist(false), 0);
+  const need25 = mode !== "ini26" || S.f.cua === "completa";
+  if (need25 && !HIST.y25 && !HIST.loading25 && !HIST.err25 && S.mcp && S.fullVentas) setTimeout(() => load25(false), 0);
+  const info = $("#cuaInfo");
+  if (!S.fullVentas){
+    info.innerHTML = '<div class="panel"><div class="empty"><strong>' + (HIST.loading ? 'Leyendo todo el historial…' : 'Falta cargar el historial completo') + '</strong><p>Para cuadrar se leen todas las ventas, cambios, ventas al mayor e ingresos/egresos desde enero de 2026. Tarda unos segundos.</p>' +
+      (HIST.loading ? '' : '<button class="btn pri" type="button" id="cuaLoad">Cargar historial</button>') + (HIST.err ? '<p class="neg">' + esc(HIST.err) + '</p>' : '') + '</div></div>';
+    const b = $("#cuaLoad"); if (b) b.onclick = () => loadHist(false);
+    $("#cuaTable").innerHTML = ""; return;
+  }
+  info.innerHTML = '<div class="note">Punto de partida: <b>' + MODE_TXT[mode] + '</b>. Se suma todo lo que entró y se resta todo lo que salió desde el día siguiente al punto de partida hasta el día del conteo. ' +
+    (need25 && !HIST.y25 ? (HIST.loading25 ? '<b>Leyendo 2025…</b> ' : (HIST.err25 ? '<span class="neg">' + esc(HIST.err25) + '</span> ' : '')) : '') +
+    (mode === "cero" ? 'Ojo: no hay ventas del 11/02 al 31/03/2025 ni entradas antes del 23/04/2025, así que solo confía en los productos con historia completa. ' : '') +
+    (S.unmatched.length ? ' Hay ' + S.unmatched.length + ' nombres de producto en las hojas que no están vinculados y no cuentan en el cuadre. <button class="btn sm" type="button" data-go="vincular">Vincularlos</button>' : '') + '</div>';
+  const byK = histByK();
+  const q = norm($("#qCua").value), f = S.f.cua;
+  let list = [];
+  for (const k of latestCounts().keys()){ const r = cuadreFor(k, byK); if (r && matchQ(r.c, q)) list.push(r); }
+  if (f === "cero") list = list.filter(r => r.base.q === 0);
+  else if (f === "nocuadra") list = list.filter(r => Math.abs(r.diff) >= 1e-9);
+  else if (f === "faltan") list = list.filter(r => r.diff <= -1e-9);
+  else if (f === "sobran") list = list.filter(r => r.diff >= 1e-9);
+  else if (f === "sinentrada") list = list.filter(r => r.start + r.tin <= 0 && r.base.q > 0);
+  else if (f === "completa") list = list.filter(r => r.completa);
+  list.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff) || a.c.p.desc.localeCompare(b.c.p.desc));
+  if (!list.length){ $("#cuaTable").innerHTML = '<div class="panel"><div class="empty"><strong>' + (latestCounts().size ? 'Ningún producto con este filtro' : 'Todavía no hay productos contados') + '</strong></div></div>'; return; }
+  const ok = list.filter(r => Math.abs(r.diff) < 1e-9).length;
+  const shown = list.slice(0, S.lim.cua);
+  $("#cuaTable").innerHTML = '<p class="muted">' + list.length + ' productos · ' + ok + ' cuadran exacto</p><div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Contaste</th><th class="n">Partida</th><th class="n">+ Entradas</th><th class="n">− Salidas</th><th class="n">Debería haber</th><th>Resultado</th></tr></thead><tbody>' +
+    shown.map(r => '<tr class="click" data-cua="' + esc(r.k) + '"><td><div class="pname">' + esc(r.c.p.desc) + '</div><div class="sku">' + esc(r.c.p.sku) + (S.ubic[r.k] ? ' · 📍 ' + esc(S.ubic[r.k]) : '') + '</div></td>' +
+      '<td class="n"><b>' + fmtN(r.base.q) + '</b><div class="sku">' + fmtD(r.base.d) + '</div></td><td class="n">' + (r.ini ? fmtN(r.ini.q) + '<div class="sku">' + fmtD(r.ini.d) + '</div>' : (r.mode === "cero" ? '0' : '<span class="muted" title="Sin stock inicial en el Excel: arranca en 0">0 *</span>')) + (r.completa ? '<div class="sku" style="color:var(--ok)">historia completa</div>' : '') + '</td>' +
+      '<td class="n">' + fmtN(r.tin) + '</td><td class="n">' + fmtN(r.tout) + '</td><td class="n' + (r.calc < 0 ? ' neg' : '') + '">' + fmtN(r.calc) + '</td><td>' + cuaPill(r) + cuaWhy(r) + '</td></tr>').join("") +
+    '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="moreCua">Ver ' + Math.min(PAGE, list.length - shown.length) + ' más</button>' : '');
+  const mb = $("#moreCua"); if (mb) mb.onclick = () => { S.lim.cua += PAGE; render(); };
+}
+document.addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-cua]"); if (!tr || e.target.closest("input,button")) return;
+  const r = cuadreFor(tr.dataset.cua, histByK()); if (!r) return;
+  const lines = m => Array.from(m.entries()).sort((a, b) => b[1] - a[1]).map(([l, q]) => '<tr><td>' + esc(l) + '</td><td class="n">' + fmtN(q) + '</td></tr>').join("") || '<tr><td colspan="2" class="muted">Nada</td></tr>';
+  const base = r.start + r.tin, pct = base > 0 ? Math.max(0, 100 - Math.abs(r.diff) / base * 100) : null;
+  openDlg('<div class="row"><div><h2>' + esc(r.c.p.desc) + '</h2><div class="sku">' + esc(r.c.p.sku) + (S.ubic[r.k] ? ' · 📍 ' + esc(S.ubic[r.k]) : '') + '</div></div><span class="spacer"></span>' + cuaPill(r) + '</div>' +
+    '<div class="facts"><div class="fact"><span>Punto de partida</span><b>' + fmtN(r.start) + '</b><span>' + (r.ini ? 'conteo del ' + fmtD(r.ini.d) : (r.mode === "cero" ? 'desde cero' : 'sin stock inicial en el Excel')) + '</span></div><div class="fact"><span>+ Entradas</span><b>' + fmtN(r.tin) + '</b></div><div class="fact"><span>− Salidas</span><b>' + fmtN(r.tout) + '</b></div>' +
+    '<div class="fact"><span>Debería haber</span><b>' + fmtN(r.calc) + '</b><span>al ' + fmtD(r.base.d) + '</span></div><div class="fact"><span>Contaste</span><b>' + fmtN(r.base.q) + '</b><span>' + (r.base.parts && r.base.parts.length > 1 ? r.base.parts.map(x => fmtN(x.q) + ' en ' + esc(x.ubic || 'sin ubicación') + ' (' + fmtD(x.d) + ')').join(' + ') : fmtD(r.base.d)) + '</span></div>' + (pct !== null ? '<div class="fact"><span>Coincide</span><b>' + fmtN(pct, 1) + '%</b><span>de lo que entró</span></div>' : '') + '</div>' +
+    '<div class="two"><div><h3>Entradas</h3><div class="tbl-wrap"><table><tbody>' + lines(r.ing) + '</tbody></table></div></div><div><h3>Salidas</h3><div class="tbl-wrap"><table><tbody>' + lines(r.sal) + '</tbody></table></div></div></div>' +
+    '<p class="note">Cuenta todo lo anotado ' + (r.ini ? 'desde el día siguiente al ' + fmtD(r.ini.d) : 'desde el ' + fmtD(r.from)) + ' hasta el día del conteo (' + fmtD(r.base.d) + '). Lo que salió después del conteo no entra en el cuadre.' + (r.completa === true ? ' Este producto tiene historia completa: su primera entrada fue después del 23/04/2025.' : (r.completa === false ? ' Este producto ya tenía movimientos antes de que se anotaran las entradas, así que "desde cero" no sirve para él.' : '')) + '</p>' +
+    '<div class="row"><button class="btn" type="button" id="cuaMov">Ver cada movimiento</button><span class="spacer"></span><button class="btn" type="button" data-close>Cerrar</button></div>');
+  $("#cuaMov").onclick = () => { H.k = r.k; H.only = true; H.lim = 200; renderHistory(); };
+});
+
+/* ---------- boot ---------- */
+async function boot(){
+  showView(S.view);
+  const cl = window.claude;
+  if (!cl || typeof cl.use !== "function"){ locked("Abre esta app desde tu cuenta de Claude", "Los datos del inventario solo se cargan dentro de Claude."); return; }
+  const [db, mcp, user] = await Promise.all([cl.use("db"), cl.use("mcp"), cl.use("user")]);
+  if (user && typeof user.isOwner === "function"){ let own = null; try { own = await user.isOwner(); } catch(e){} if (own === false){ locked("Esta app es privada", "Solo su dueña puede ver este inventario."); return; } }
+  if (!db){ locked("No se pudo abrir el inventario", "Inicia sesión en Claude y vuelve a abrir la app."); return; }
+  S.db = db; S.mcp = mcp;
+  if (!mcp){ S.salesErr = { code: "not_granted" }; setSync("err", "Sin acceso a Google Sheets"); }
+  const onErr = e => { if (e && e.code === "revoked") locked("Se perdió el acceso", "Recarga la página."); else toast(dbErrMsg(e), true); };
+  db.collection("catalogo").onSnapshot(snap => {
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const meta = docs.find(d => d.id === "meta") || null;
+    rebuildCatalog(docs.filter(d => d.id !== "meta"), meta);
+    const first = !S.ready.catalogo; S.ready.catalogo = true; recompute(); render();
+    if (first) maybeLoad();
+  }, onErr);
+  db.collection("estado").onSnapshot(snap => {
+    for (const d of snap.docs){
+      const v = d.data(); S.estadoExists[d.id] = true;
+      if (d.id === "costos") S.costs = clean(v.map);
+      else if (d.id === "alias"){ S.alias = clean(v.map, true); S.aliasVer = (S.aliasVer || 0) + 1; }
+      else if (d.id === "ubicaciones") S.ubic = clean(v.map, true);
+      else if (d.id === "extras"){ S.extras = clean(v.map, true); if (S.catChunks) rebuildCatalog(S.catChunks, S.catMetaRaw); }
+      else if (d.id === "config") S.cfg = { ...DEF_CFG, ...v };
+    }
+    const first = !S.ready.estado; S.ready.estado = true; recompute(); render();
+    if (first) maybeLoad();
+  }, onErr);
+  db.collection("conteos").limit(1000).onSnapshot(snap => {
+    const prevMin = minCountDate();
+    S.conteos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const first = !S.ready.conteos; S.ready.conteos = true; recompute(); render();
+    if (first) maybeLoad(); else if (S.sales && minCountDate() < (S.salesInfo ? S.salesInfo.from : prevMin)) loadSales(false);
+  }, onErr);
+  db.collection("compras").limit(1000).onSnapshot(snap => {
+    S.compras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    S.ready.compras = true; recompute(); render();
+  }, onErr);
+}
+function clean(m, keepStr){ const o = {}; for (const k in (m || {})){ const v = m[k]; if (v === null || v === undefined) continue; o[k] = keepStr ? v : +v; } return o; }
+function minCountDate(){ let m = "9999"; for (const v of latestCounts().values()) if (v.d < m) m = v.d; return m; }
+let loadedOnce = false;
+function maybeLoad(){
+  if (loadedOnce || !S.ready.catalogo || !S.ready.estado || !S.ready.conteos) return;
+  loadedOnce = true;
+  if (!S.catalog.length){ setSync("", "Falta traer el catálogo"); return; }
+  if (S.mcp) loadSales(false).then(() => { if (!S.fullVentas) loadHist(false).then(() => { if (cuaMode() !== "ini26") load25(false); }); });
+}
+function locked(t, s){ $("#main").innerHTML = '<div class="locked"><h2>' + esc(t) + '</h2><p class="muted">' + esc(s) + '</p></div>'; setSync("err", t); $("#btnRefresh").hidden = true; }
+boot();
+})();
+</script>
+
+</body></html>
