@@ -371,7 +371,7 @@ details summary{cursor:pointer;font-weight:600}
     </div>
     <div class="panel">
       <h3>Por confirmar contigo</h3>
-      <p class="muted">Lo usé así para cargar los conteos de Yonaiker. Si alguno está mal, se corrige y la app recalcula sola.</p>
+      <p class="muted">Lo usé así para cargar los conteos. Si alguno está mal, se corrige y la app recalcula sola.</p>
       <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
         <li>Linterna con martillo = Linterna 4 en 1</li>
         <li>Sérum anticaída Disaar = Serum anticaída</li>
@@ -439,10 +439,10 @@ details summary{cursor:pointer;font-weight:600}
 (function(){
 "use strict";
 const SRC = {
-  ventas: { id: "17UdVr7xGJLKiAAOSDJxy7ywQFObH-GKNRi8na4sjSMw", sheet: "Ventas", valbar: "VENTAS VAL - BARQUI", merc: "MERCANCIA - NUEVO", cyr: "CAMBIOS Y REEMBOLSOS" },
-  inv: { id: "1j42sRv9_TJrX7di4Wy0PX6mMuQ_FgNi86wVb-_I4-_Q", sheet: "Stock de Productos", variantes: "Productos con Variantes", ie: "Ingresos/Egresos", ventasEJ: "Ventas Ene-Jun", cyrEJ: "CyR Ene-Jun", mercEJ: "Mercancia Ene-Jun" },
-  fin: { id: "133d0IDZqfeJLlFNL2bshxDMlw6ncwjKHs-y1IPZa-rc", sheet: "COSTOS GLOSARIO" },
-  y25: { ventas: "1f2kNn_bnfhD_ezUCbeqWFxq97OJycB0yDqV_FNk-WOM", inv: "15IX-jFp6pWxfOUCrwYU-_W80MQfVUwtMnei8AslN7RM" }
+  ventas: { id: "ID_SHEET_DESPACHO", sheet: "Ventas", valbar: "VENTAS VAL - BARQUI", merc: "MERCANCIA - NUEVO", cyr: "CAMBIOS Y REEMBOLSOS" },
+  inv: { id: "ID_SHEET_INVENTARIO_2026", sheet: "Stock de Productos", variantes: "Productos con Variantes", ie: "Ingresos/Egresos", ventasEJ: "Ventas Ene-Jun", cyrEJ: "CyR Ene-Jun", mercEJ: "Mercancia Ene-Jun" },
+  fin: { id: "ID_SHEET_PANEL", sheet: "COSTOS GLOSARIO" },
+  y25: { ventas: "ID_SHEET_DESPACHO_2025", inv: "ID_SHEET_INVENTARIO_2025" }
 };
 /* Cortes para no contar dos veces lo que está copiado en dos hojas */
 const CUT = { fin25: "2025-12-31", mayorViejoHasta: "2025-09-05", mayorNuevoDesde: "2025-09-06", entradas25: "2025-04-23" };
@@ -1384,7 +1384,7 @@ async function loadVentasSheet(id, sheet, fresh){
   const [rows, prod] = await Promise.all([readRows(id, sheet, "B", "F", 2, last, fresh), readRows(id, sheet, "H", "K", 2, last, fresh)]);
   return parseVentas(rows, prod, 2).map(s => (s.sh = sheet, s));
 }
-/* Valencia y Barquisimeto: salen del almacén de Caracas (Anakarina, 24/11/2026). Columnas B orden, D fecha, E estado, F tienda, H producto, J cantidad */
+/* Valencia y Barquisimeto: salen del almacén de Caracas. Columnas B orden, D fecha, E estado, F tienda, H producto, J cantidad */
 async function loadValBarqui(fresh){
   const rows = await getValues(SRC.ventas.id, "'" + SRC.ventas.valbar + "'!B2:J", fresh);
   const out = [];
