@@ -199,7 +199,7 @@ details summary{cursor:pointer;font-weight:600}
   <!-- INVENTARIO -->
   <section class="view" data-view="inventario" hidden>
     <div class="row"><h2>Inventario</h2></div>
-    <p class="lead">Cada producto contado muestra su <b>cuadre con tus Excel</b>: lo que había el 01/01/2026 + todo lo que entró − todo lo que salió hasta el día del conteo, comparado con lo contado. <b>Stock hoy</b> = lo contado + entradas − salidas desde el día siguiente al conteo. Sin conteo se ve "≈", un estimado. Reservado = pedidos PENDIENTE o PARA OTRO DÍA. Toca un producto para ver cada movimiento.</p>
+    <p class="lead">Cada producto contado muestra su <b>cuadre con tus Excel</b>: todo lo que entró desde la primera vez que llegó − todo lo que salió hasta el día del conteo (los productos que ya existían antes de abril 2025 arrancan del stock inicial 01/01/2026), comparado con lo contado. <b>Stock hoy</b> = lo contado + entradas − salidas desde el día siguiente al conteo. Sin conteo se ve "≈", un estimado. Reservado = pedidos PENDIENTE o PARA OTRO DÍA. Toca un producto para ver cada movimiento.</p>
     <div class="row">
       <input class="search" id="qInv" type="search" placeholder="Buscar producto o código" aria-label="Buscar producto">
       <div class="chips" id="chipsInv">
@@ -222,7 +222,7 @@ details summary{cursor:pointer;font-weight:600}
       <div class="row">
         <label class="f">Fecha del conteo<input type="date" id="cFecha"></label>
         <label class="f" style="flex:1 1 180px">Ubicación (opcional)<input type="text" id="cUbic" placeholder="Ej. Hilera 3" list="dlUbic"></label>
-        <label class="f" style="flex:1 1 150px">Quién contó<input type="text" id="cResp" placeholder="Ej. Yonaiker" list="dlResp"></label>
+        <label class="f" style="flex:1 1 150px">Quién contó<input type="text" id="cResp" placeholder="Ej. nombre" list="dlResp"></label>
         <label class="f" style="flex:1 1 200px">Nota (opcional)<input type="text" id="cNota" placeholder="Ej. conteo general almacén"></label>
       </div>
       <div class="row">
@@ -264,7 +264,7 @@ details summary{cursor:pointer;font-weight:600}
         <button class="chip" type="button" data-f="sinentrada" aria-pressed="false">Sin entrada anotada</button>
         <button class="chip" type="button" data-f="completa" aria-pressed="false">Con historia completa</button>
       </div>
-      <label class="f">Punto de partida<select id="cuaMode"><option value="ini26">Conteo del 01/01/2026 (recomendado)</option><option value="ini25">Conteo de 2025 (jun–sep 2025)</option><option value="cero">Desde cero: todo desde 2025</option></select></label>
+      <label class="f">Punto de partida<select id="cuaMode"><option value="auto">Desde la primera llegada (recomendado)</option><option value="ini26">Stock inicial del 01/01/2026</option><option value="ini25">Conteo de 2025 (jun–sep 2025)</option><option value="cero">Desde cero: todo desde 2025</option></select></label>
     </div>
     <div id="cuaTable"></div>
   </section>
@@ -335,7 +335,7 @@ details summary{cursor:pointer;font-weight:600}
         <tr><td>Ventas despacho Caracas: ENTREGADO y MRW O ZOOM</td><td>Resta</td></tr>
         <tr><td>Ventas PENDIENTE y PARA OTRO DÍA</td><td>No resta todavía: queda como <b>reservado</b> hasta que se entregue</td></tr>
         <tr><td>CANCELADO y NO ENTREGADO</td><td>No cuenta</td></tr>
-        <tr><td>Ventas al mayor (Jorge, Andrea, Teatros, Valera…)</td><td>Resta. Si la cantidad es negativa es una devolución y vuelve al stock</td></tr>
+        <tr><td>Ventas al mayor</td><td>Resta. Si la cantidad es negativa es una devolución y vuelve al stock</td></tr>
         <tr><td>Cambios: lo que se entrega</td><td>Resta si el cambio se entregó</td></tr>
         <tr><td>Cambios: lo que se retira</td><td>Vuelve al stock si el cambio se entregó y no tiene avería</td></tr>
         <tr><td>INGRESO en Ingresos/Egresos (China, Colombia, compras locales, desde DroPanas o Maracaibo)</td><td>Suma</td></tr>
@@ -418,7 +418,7 @@ details summary{cursor:pointer;font-weight:600}
       <p class="muted">Solo lee, nunca modifica tus hojas.</p>
       <div class="tbl-wrap"><table><thead><tr><th>Hoja</th><th>Qué hace en el stock</th></tr></thead><tbody>
         <tr><td>DESPACHO CARACAS - 2026 · Ventas</td><td>ENTREGADO y MRW O ZOOM restan. PENDIENTE y PARA OTRO DÍA quedan reservados. CANCELADO y NO ENTREGADO no cuentan.</td></tr>
-        <tr><td>DESPACHO CARACAS - 2026 · MERCANCIA - NUEVO</td><td>Ventas al mayor (Jorge, Andrea, Teatros…): restan siempre. Aparecen como la tienda AL MAYOR.</td></tr>
+        <tr><td>DESPACHO CARACAS - 2026 · MERCANCIA - NUEVO</td><td>Ventas al mayor: restan siempre. Aparecen como la tienda AL MAYOR.</td></tr>
         <tr><td>DESPACHO CARACAS - 2026 · CAMBIOS Y REEMBOLSOS</td><td>"Se entrega" resta. "Se retira" vuelve al stock si el cambio se entregó y no tiene avería.</td></tr>
         <tr><td>No se usan</td><td>COMANDAS INTERIOR CE (son ventas de DroPanas, que salen de su fulfillment: ya restan cuando se les envía la mercancía), ventas de Maracaibo (ya restan como envío a Maracaibo), Productos Adicionales de Ventas (son para probar tallas) y Ajuste de Inventario.</td></tr>
         <tr><td>INVENTARIO DESPACHO CARACAS - 2026 · Ingresos/Egresos</td><td>INGRESO suma y EGRESO resta: lo que tu equipo ya anota ahí cuenta solo. Los envíos a DroPanas y a Maracaibo se ven por separado en el cuadre.</td></tr>
@@ -435,6 +435,8 @@ details summary{cursor:pointer;font-weight:600}
 <dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
 <div class="toast" id="toast" hidden></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="adapter.js"></script>
 <script>
 (function(){
 "use strict";
@@ -442,6 +444,7 @@ const SRC = {
   ventas: { id: "ID_SHEET_DESPACHO", sheet: "Ventas", valbar: "VENTAS VAL - BARQUI", merc: "MERCANCIA - NUEVO", cyr: "CAMBIOS Y REEMBOLSOS" },
   inv: { id: "ID_SHEET_INVENTARIO_2026", sheet: "Stock de Productos", variantes: "Productos con Variantes", ie: "Ingresos/Egresos", ventasEJ: "Ventas Ene-Jun", cyrEJ: "CyR Ene-Jun", mercEJ: "Mercancia Ene-Jun" },
   fin: { id: "ID_SHEET_PANEL", sheet: "COSTOS GLOSARIO" },
+  y24: { id: "ID_SHEET_VENTAS_2024", tabs: [["OCTUBRE - HOJA DE VENTAS ACTUALIZADA", 2024], ["NOVIEMBRE - HOJA DE VENTAS ACTUALIZADA", 2024], ["DICIEMBRE - HOJA DE VENTAS ACTUALIZADA", 2024], ["ENERO 2025 - HOJA DE VENTAS ACTUALIZADA", 2025], ["FEBRERO 2025 - HOJA DE VENTAS DE ACTUALIZADAS", 2025]], desde: "2024-10-16", hasta: "2024-12-08", tiendas: ["BE YOU PINK", "NEBULA"], id2: "ID_SHEET_VENTAS_2024B", tab2: " HOJA DE VENTAS", desde2: "2024-12-09", hasta2: "2025-02-13" },
   y25: { ventas: "ID_SHEET_DESPACHO_2025", inv: "ID_SHEET_INVENTARIO_2025" }
 };
 /* Cortes para no contar dos veces lo que está copiado en dos hojas */
@@ -571,7 +574,7 @@ function mcpErrText(e){
   if (c === "blocked_by_policy") return { t: "Tu organización bloquea esta conexión de Google Sheets.", retry:false };
   if (c === "server_unavailable" || c === "upstream_error") return { t: "Google Sheets no respondió a tiempo.", retry:true, label:"Reintentar" };
   if (c === "tool_error") return { t: "Google Sheets devolvió un error: " + (e.message || "sin detalle"), retry:true, label:"Reintentar" };
-  if (c === "not_granted" || c === "capability_disabled" || c === "capability_removed") return { t: "Esta vista no puede leer Google Sheets. Abre la app desde claude.ai.", retry:false };
+  if (c === "not_granted" || c === "capability_disabled" || c === "capability_removed") return { t: "Esta vista no puede leer Google Sheets. Vuelve a entrar con tu clave.", retry:false };
   return { t: "No se pudo leer Google Sheets (" + (c || "error") + ").", retry:true, label:"Reintentar" };
 }
 
@@ -726,6 +729,8 @@ function resolveName(nm){
   if (Object.prototype.hasOwnProperty.call(S.alias, nm) && S.alias[nm]) return S.alias[nm];
   return S.byNorm.get(nm) || null;
 }
+/* Kits: una venta del kit descuenta de cada producto que lo forma (estado/kits: clave del kit → claves separadas por coma) */
+function kitKeys(k){ const v = S.kits && S.kits[k]; if (!v) return [k]; const a = String(v).split(",").map(x => x.trim()).filter(x => S.byKey.has(x)); return a.length ? a : [k]; }
 /* Reglas de cada movimiento */
 const isOut = s => (s.kind === "venta" && SALIDA.has(s.est)) || s.kind === "mayor" || (s.kind === "csale" && SALIDA.has(s.est)) || s.kind === "egreso";
 const isIn = s => (s.kind === "cvuelve" && SALIDA.has(s.est) && !s.averia) || (s.kind === "ingreso" && s.d <= today());
@@ -769,7 +774,7 @@ function recompute(){
       let u = unm.get(nm); if (!u){ u = { nm, name: s.name, q: 0, n: 0, t: new Set(), src: new Set(), last: "" }; unm.set(nm, u); }
       u.q += s.q; u.n++; u.t.add(s.t); u.src.add(SRC_LABEL[s.kind]); if (s.d > u.last) u.last = s.d; continue;
     }
-    let arr = salesBy.get(k); if (!arr){ arr = []; salesBy.set(k, arr); } arr.push(s);
+    for (const kk of kitKeys(k)){ let arr = salesBy.get(kk); if (!arr){ arr = []; salesBy.set(kk, arr); } arr.push(s); }
     if (isVel(s) && s.d >= vStart && s.d <= td) storeSet.set(s.t, (storeSet.get(s.t) || 0) + s.q);
   }
   // Con el historial completo cargado, también se listan los nombres sin vincular de meses anteriores
@@ -801,11 +806,16 @@ function recompute(){
     const stock = base ? base.q + inn - out : null;
     /* Sin conteo: estimado = Stock Inicial 01/01/2026 del Excel + movimientos desde el día siguiente */
     let est = null;
-    const ini = !base && byK && S.inicial ? S.inicial[p.k] : null;
-    if (ini){
-      est = ini.q;
-      for (const s of (byK.get(p.k) || []).concat(sales.filter(s => s.kind !== "venta"))){ if (s.d <= ini.d || s.d > td) continue; if (isOut(s)) est -= s.q; else if (isIn(s)) est += s.q; }
-      for (const e of (inBy.get(p.k) || [])) if (e.d > ini.d && e.d <= td) est += e.q;
+    let ini = !base && byK && S.inicial ? S.inicial[p.k] : null;
+    if (!base && byK){
+      const mv = (byK.get(p.k) || []).concat(sales.filter(s => s.kind !== "venta"));
+      const fm = cuaMode() === "auto" ? firstMoves(p.k, mv) : null;
+      if (fm && fm.completa) ini = { q: 0, d: "2024-08-31", llegada: fm.firstIn };
+      if (ini){
+        est = ini.q;
+        for (const s of mv){ if ((s.d <= ini.d && !isLate25(s)) || s.d > td) continue; if (isOut(s)) est -= s.q; else if (isIn(s)) est += s.q; }
+        for (const e of (inBy.get(p.k) || [])) if (e.d > ini.d && e.d <= td) est += e.q;
+      }
     }
     const disp = stock === null ? null : stock - res;
     const perDay = vel / cfg.diasVentas;
@@ -983,7 +993,7 @@ function renderInv(calcs){
       '<td class="n">' + (c.base ? fmtN(c.base.q) + ' <span class="muted">· ' + fmtD(c.base.d) + '</span>' + (c.base.parts && c.base.parts.length > 1 ? '<div class="sku">suma de ' + c.base.parts.length + ' lugares</div>' : '') : '<span class="muted">sin conteo</span>') + '</td>' +
       '<td>' + cuaCell(c, cuaOf(c)) + '</td>' +
       '<td class="n">' + (c.base ? fmtN(c.inn) : '—') + '</td><td class="n">' + (c.base ? fmtN(c.out) : '—') + '</td>' +
-      '<td class="n' + (c.stock !== null && c.stock < 0 ? ' neg' : '') + '">' + (c.stock === null && c.est !== null ? '<span class="muted" title="Estimado: stock inicial 01/01/2026 + movimientos. Falta conteo físico.">≈ ' + fmtN(c.est) + '</span>' : '<b>' + fmtN(c.stock) + '</b>') + '</td><td class="n">' + fmtN(c.res) + '</td>' +
+      '<td class="n' + (c.stock !== null && c.stock < 0 ? ' neg' : '') + '">' + (c.stock === null && c.est !== null ? '<span class="muted" title="Estimado: todo lo que entró menos todo lo que salió desde la primera llegada (o desde el stock inicial 01/01/2026 si ya existía antes). Falta conteo físico.">≈ ' + fmtN(c.est) + '</span>' : '<b>' + fmtN(c.stock) + '</b>') + '</td><td class="n">' + fmtN(c.res) + '</td>' +
       '<td class="n">' + (c.cost !== null ? fmtUSD(c.cost) : '<span class="muted">—</span>') + '</td><td class="n">' + (c.val ? fmtUSD(c.val) : '<span class="muted">—</span>') + '</td></tr>').join("")
       : '<tr><td colspan="9"><div class="empty">Ningún producto con este filtro.</div></td></tr>') +
     '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="moreInv">Ver ' + Math.min(PAGE, list.length - shown.length) + ' más</button>' : '');
@@ -1259,7 +1269,7 @@ function renderAjustes(){
   $("#catInfo").textContent = S.catMeta ? S.catMeta.total + " productos · actualizado el " + new Date(S.catMeta.at).toLocaleString("es-VE") : "Aún no se ha traído el catálogo.";
 }
 $("#cuaMode").addEventListener("change", async e => {
-  const cfg = { ...S.cfg, cuadreModo: e.target.value }; S.cfg = cfg; S.lim.cua = PAGE; render();
+  const cfg = { ...S.cfg, cuadreModo: e.target.value }; S.cfg = cfg; S.lim.cua = PAGE; recompute(); render();
   if (e.target.value !== "ini26" && !HIST.y25) load25(false);
   try { await enqueue("estado/config", () => S.db.doc("estado/config").set(cfg)); } catch(err){ toast(dbErrMsg(err), true); }
 });
@@ -1290,7 +1300,7 @@ function histEvents(k){
   for (const c of S.conteos){ const it = c.items || {}; if (it[k] !== undefined && it[k] !== null) ev.push({ d: c.fecha, o: 9, sub: c.creado || "", type: "conteo", q: +it[k], label: +it[k] === 0 ? "Conteo físico: no queda" : "Conteo físico", det: [c.resp ? "contó " + c.resp : "", c.ubic, c.nota].filter(Boolean).join(" · ") }); }
   for (const c of S.compras){ for (const it of (c.items || [])) if (it.k === k){ const sal = isSalidaTipo(c.tipo); ev.push({ d: c.fecha, o: 1, sub: c.creado || "", type: "app", eff: sal ? -(+it.q || 0) : (+it.q || 0), q: +it.q || 0, label: TIPOS[c.tipo || "entrada"], det: [c.prov, c.nota, "registrado en la app"].filter(Boolean).join(" · ") }); } }
   const sheetMov = (S.calc.get(k) || {}).sales || [];
-  const ventasFull = S.fullVentas ? S.fullVentas.filter(s => { const kk = resolveName(norm(s.name)); return kk === k; }) : null;
+  const ventasFull = S.fullVentas ? (histByK().get(k) || []) : null;
   for (const s of sheetMov){
     if (ventasFull && s.kind === "venta") continue;
     ev.push(sheetEv(s));
@@ -1307,17 +1317,27 @@ function sheetEv(s){
   else if (isRes(s)) note = "reservado";
   else note = "no mueve stock";
   const det = [s.t && s.t !== "GENERAL" ? s.t : "", s.ord ? "orden " + s.ord : "", s.who || ""].filter(Boolean).join(" · ") + " · " + (s.sh || SRC_LABEL[s.kind]) + " fila " + s.row;
-  return { d: s.d, o: 2, sub: String(s.row).padStart(7, "0"), type: "hoja", eff, q: s.q, note, label: movLabel(s), det };
+  return { d: s.d, o: 2, sub: String(s.row).padStart(7, "0"), type: "hoja", eff, q: s.q, note, label: movLabel(s), det, late: isLate25(s), grp: eff < 0 ? outLabel(s) : (eff > 0 ? inLabel(s) : null) };
 }
 function renderHistory(){
   const c = S.calc.get(H.k); if (!c) return;
   const ev = histEvents(H.k);
   const vFrom = S.fullVentas ? "0000" : (S.salesInfo ? S.salesInfo.from : "9999");
   let bal = null, started = false;
+  /* Sin conteo físico: el saldo arranca del punto de partida (stock inicial 01/01/2026 o cero antes de la primera llegada) */
+  const ini0 = !ev.some(e => e.type === "conteo") && c.estIni ? c.estIni : null;
+  if (ini0){
+    let late = 0; for (const e of ev) if (e.late && e.d <= ini0.d && e.eff) late += e.eff;
+    ev.push({ d: ini0.d, o: 8, sub: "", type: "conteo", inicio: true, q: ini0.q + late, label: ini0.llegada ? "Punto de partida: cero antes de la primera llegada" : "Punto de partida: stock inicial del Excel", det: late ? "incluye " + fmtN(late) + " de llegadas de 2025 anotadas después" : "" });
+    ev.sort((x, y) => x.d.localeCompare(y.d) || (x.o - y.o) || String(x.sub).localeCompare(String(y.sub)));
+  }
+  const sumIn = new Map(), sumOut = new Map(); let sumFrom = null;
   for (const e of ev){
+    if (started && e.type !== "conteo" && e.eff && e.grp && e.d <= today()){ const m = e.eff > 0 ? sumIn : sumOut; m.set(e.grp, (m.get(e.grp) || 0) + Math.abs(e.eff)); }
+    if (e.type === "conteo" && !started && e.d >= vFrom) sumFrom = e;
     if (e.type === "conteo"){
       if (!started && e.d >= vFrom) started = true;
-      if (started){ e.diff = bal === null ? null : e.q - bal; bal = e.q; e.bal = bal; }
+      if (started){ e.diff = bal === null || e.inicio ? null : e.q - bal; bal = e.q; e.bal = bal; }
       continue;
     }
     if (started && bal !== null && e.eff){ bal += (e.eff || 0); }
@@ -1339,18 +1359,20 @@ function renderHistory(){
     '<div class="row"><label class="f" style="flex:1 1 200px">Ubicación<input type="text" id="hUbic" list="dlUbic" value="' + esc(S.ubic[c.p.k] || "") + '" placeholder="Ej. Hilera 3"></label>' +
     '<label class="f">Ya no queda: fecha<input type="date" id="hZeroD" value="' + today() + '"></label><button class="btn" type="button" id="hZero" style="align-self:flex-end">Ya no hay más (contar 0)</button></div>' +
     '<div class="facts"><div class="fact"><span>Último conteo</span><b>' + (c.base ? fmtN(c.base.q) : '—') + '</b><span>' + (c.base ? fmtD(c.base.d) : 'sin conteo') + '</span></div>' +
-    (c.est !== null ? '<div class="fact"><span>Estimado sin conteo</span><b>≈ ' + fmtN(c.est) + '</b><span>desde stock inicial ' + fmtD(c.estIni.d) + '</span></div>' : '') +
+    (c.est !== null ? '<div class="fact"><span>Estimado sin conteo</span><b>≈ ' + fmtN(c.est) + '</b><span>' + (c.estIni.llegada ? 'desde su primera llegada ' + fmtD(c.estIni.llegada) : 'desde stock inicial ' + fmtD(c.estIni.d)) + '</span></div>' : '') +
     '<div class="fact"><span>+ Entradas</span><b>' + fmtN(c.inn) + '</b></div><div class="fact"><span>− Salidas</span><b>' + fmtN(c.out) + '</b></div>' +
     '<div class="fact"><span>Stock</span><b class="' + ((c.stock ?? 0) < 0 ? 'neg' : '') + '">' + fmtN(c.stock) + '</b></div><div class="fact"><span>Reservado</span><b>' + fmtN(c.res) + '</b></div>' +
     '<div class="fact"><span>Vendido ' + S.cfg.diasVentas + 'd</span><b>' + fmtN(c.vel) + '</b></div><div class="fact"><span>Dura</span><b>' + diasTxt(c.dias) + '</b></div><div class="fact"><span>Comprar</span><b>' + fmtN(c.sug) + '</b></div>' + (c.coming ? '<div class="fact"><span>En camino</span><b>' + fmtN(c.coming) + '</b><span>ingreso con fecha futura</span></div>' : '') +
     '<div class="fact"><span>Costo</span><b>' + (c.cost !== null ? fmtUSD(c.cost) : '—') + '</b><span>' + (c.manual !== null ? 'tu costo' : (c.g ? 'glosario' : 'sin costo')) + '</span></div></div>' +
     (Object.keys(c.velT).length ? '<div><h3>Por tienda · últimos ' + S.cfg.diasVentas + ' días</h3><p>' + Object.entries(c.velT).sort((a, b) => b[1] - a[1]).map(([t, q]) => esc(t) + ': <b>' + fmtN(q) + '</b>').join(' · ') + '</p></div>' : '') +
+    (sumFrom && (sumIn.size || sumOut.size) ? (() => { const ln = m => Array.from(m.entries()).sort((a, b) => b[1] - a[1]).map(([l, q]) => '<tr><td>' + esc(l) + '</td><td class="n">' + fmtN(q) + '</td></tr>').join("") || '<tr><td colspan="2" class="muted">Nada</td></tr>'; const tot = m => Array.from(m.values()).reduce((a, b) => a + b, 0);
+      return '<h3>' + (sumFrom.inicio && ini0.llegada ? 'Resumen desde su primera llegada (' + fmtD(ini0.llegada) + ')' : 'Resumen desde el ' + fmtD(sumFrom.d) + ' (' + (sumFrom.inicio ? 'stock inicial' : 'primer conteo') + ': ' + fmtN(sumFrom.q) + ')') + '</h3><div class="two"><div><h3>Entradas: ' + fmtN(tot(sumIn)) + '</h3><div class="tbl-wrap"><table><tbody>' + ln(sumIn) + '</tbody></table></div></div><div><h3>Salidas: ' + fmtN(tot(sumOut)) + '</h3><div class="tbl-wrap"><table><tbody>' + ln(sumOut) + '</tbody></table></div></div></div>'; })() : '') +
     '<div class="row"><h3>Historial</h3><span class="spacer"></span><div class="chips"><button class="chip" type="button" data-h="0" aria-pressed="' + !H.only + '">Todo</button><button class="chip" type="button" data-h="1" aria-pressed="' + H.only + '">Solo lo que mueve stock</button></div></div>' + ventasNote +
     (shown.length ? '<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Detalle</th><th class="n">Cantidad</th><th class="n">Stock</th></tr></thead><tbody>' +
       shown.map(e => '<tr' + (e.type === "conteo" ? ' style="background:var(--accent-soft)"' : '') + '><td style="white-space:nowrap">' + fmtD(e.d) + '</td><td>' + esc(e.label) + diffTxt(e) + '</td><td class="muted" style="font-size:12px">' + esc(e.det) + '</td><td class="n">' + qtyCell(e) + '</td><td class="n">' + (e.bal === null || e.bal === undefined ? '<span class="muted">—</span>' : '<span class="' + (e.bal < 0 ? 'neg' : '') + '">' + fmtN(e.bal) + '</span>') + '</td></tr>').join("") +
       '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="hMore">Ver ' + Math.min(200, list.length - shown.length) + ' más</button>' : '')
       : '<p class="muted">Este producto no tiene movimientos registrados.</p>') +
-    '<p class="note">La columna Stock arranca en el primer conteo y se recalcula con cada movimiento. En cada conteo ves cuánto faltó o sobró frente a lo que calculaba la app.</p>' +
+    '<p class="note">La columna Stock arranca en el primer conteo (o, si nunca se contó, en el punto de partida) y se recalcula con cada movimiento. En cada conteo ves cuánto faltó o sobró frente a lo que calculaba la app.</p>' +
     '<div class="row"><button class="btn" type="button" id="dlgCount">Agregar a un conteo</button><span class="spacer"></span><button class="btn" type="button" data-close>Cerrar</button></div>');
   $("#dlgCount").onclick = () => { if (!S.draftC.has(c.p.k)) S.draftC.set(c.p.k, ""); $("#dlg").close(); showView("conteo"); };
   $$("#dlgBody [data-h]").forEach(b => b.onclick = () => { H.only = b.dataset.h === "1"; H.lim = 200; renderHistory(); });
@@ -1423,9 +1445,13 @@ async function loadHist(fresh){
     const m26 = [], c26 = [];
     parseMayor(mEJ, SRC.inv.mercEJ, m26, 2026);
     parseCyr(cEJ, SRC.inv.cyrEJ, c26, 2026, 3);
-    const out = vJulOk.concat(vEJ, m26, c26, vVB);
+    /* Valencia y Barquisimeto: casi todos esos pedidos también están en la hoja Ventas; si la orden y el producto ya están ahí, no se cuentan de nuevo */
+    const ordKey = s => norm(s.ord) + "|" + norm(s.name);
+    const inVentas = new Set(vJul.concat(vEJ).map(ordKey));
+    const vVBok = vVB.filter(s => !s.ord || !inVentas.has(ordKey(s)));
+    const out = vJulOk.concat(vEJ, m26, c26, vVBok);
     const sOf = k => (S.sales || []).filter(s => s.kind === k);
-    HIST.stats = [statOf("Ventas ene–jun 2026 (Excel inventario 2026)", vEJ), statOf("Ventas despacho actual (jul 2026 →)", vJulOk), statOf("Ventas Valencia y Barquisimeto (salen de Caracas)", vVB), statOf("Al mayor ene–jun 2026", m26), statOf("Al mayor despacho actual", sOf("mayor")),
+    HIST.stats = [statOf("Ventas ene–jun 2026 (Excel inventario 2026)", vEJ), statOf("Ventas despacho actual (jul 2026 →)", vJulOk), statOf("Ventas Valencia y Barquisimeto que no están en la hoja Ventas", vVBok), statOf("Al mayor ene–jun 2026", m26), statOf("Al mayor despacho actual", sOf("mayor")),
       statOf("Cambios ene–jun 2026", c26), statOf("Cambios despacho actual", sOf("csale").concat(sOf("cvuelve"))), statOf("Ingresos/Egresos 2026", sOf("ingreso").concat(sOf("egreso")))]
       .concat(vJul.length - vJulOk.length ? [{ src: "Ventas repetidas entre las dos hojas (contadas una vez)", n: vJul.length - vJulOk.length, from: "", to: "" }] : []);
     if (ini){
@@ -1440,6 +1466,40 @@ async function loadHist(fresh){
     if (S.full25) HIST.stats = HIST.stats.concat(HIST.stats25);
   } catch(e){ HIST.err = mcpErrText(e).t; }
   finally { HIST.loading = false; recompute(); render(); if ($("#dlg").open && H.k) renderHistory(); }
+}
+/* Ventas de oct-2024 a feb-2025 (Excel DESPACHO CARACAS - UNIFICADO, administración anterior; solo Be You Pink y Nebula: PagaEnCasa y Store no cuentan). Las columnas cambian en cada pestaña: se buscan por el título. No trae estado de entrega: cuenta todo lo que tiene cantidad y no está anulado ni cancelado */
+async function loadVentas24(fresh){
+  const Y = SRC.y24, out = [];
+  for (const [tab, yr] of Y.tabs){
+    const col = await getValues(Y.id, "'" + tab + "'!B1:B", fresh);
+    const last = col.length; if (last < 2) continue;
+    const rows = await readRows(Y.id, tab, "A", "J", 1, last, fresh);
+    const h = (rows[0] || []).map(norm), ix = n => h.findIndex(x => x.startsWith(n));
+    const iF = ix("FECHA"), iP = ix("PRODUCTOS"), iQ = ix("CANTIDAD"), iT = ix("TALLAS"), iC = ix("COLOR"), iS = ix("TIENDA");
+    if (iF < 0 || iP < 0 || iQ < 0) continue;
+    for (let i = 1; i < rows.length; i++){
+      const r = rows[i] || []; const m = /^\s*(\d{1,2})\/(\d{1,2})\//.exec(String(r[iF] ?? "")); if (!m) continue;
+      const d = yr + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0"); if (d < Y.desde || d > Y.hasta) continue;
+      if (iS < 0 || !Y.tiendas.includes(norm(r[iS]))) continue;
+      const e = norm(r[0]); if (e === "ANULADO" || e === "CANCELADO" || e.startsWith("NO QUISO")) continue;
+      const qq = num(r[iQ]); if (!isFinite(qq) || qq <= 0) continue;
+      const base = String(r[iP] ?? "").trim(); if (!base) continue;
+      const tc = [iT >= 0 ? r[iT] : "", iC >= 0 ? r[iC] : ""].map(x => String(x ?? "").trim()).filter(Boolean).join(" ");
+      const full = tc ? base + " " + tc : base; const kf = tc ? resolveName(norm(full)) : null;
+      out.push({ kind: "venta", d, est: "ENTREGADO", t: (iS >= 0 ? norm(r[iS]) : "") || "SIN TIENDA", name: kf && kf !== IGN ? full : base, q: qq, row: i + 1, sh: "Ventas oct-2024 a feb-2025 (" + tab.split(" ")[0] + ")" });
+    }
+  }
+  /* Desde el 09/12/2024 sus tiendas pasaron al Excel DESPACHO CARACAS - BYP NB, que sí trae el estado del pedido. Columnas: B estado, C fecha, D orden, E tienda, H producto, I talla, J color, K cantidad */
+  const c2 = await getValues(Y.id2, "'" + Y.tab2 + "'!C1:C", fresh);
+  if (c2.length > 1){
+    const rows = await readRows(Y.id2, Y.tab2, "B", "K", 2, c2.length, fresh);
+    rows.forEach((r, i) => { const d = parseDMY(r[1]); if (!d || d < Y.desde2 || d > Y.hasta2) return;
+      const base = String(r[6] ?? "").trim(); if (!base) return; let qq = num(r[9]); if (!isFinite(qq)) qq = 1;
+      const tc = [r[7], r[8]].map(x => String(x ?? "").trim()).filter(Boolean).join(" ");
+      const full = tc ? base + " " + tc : base; const kf = tc ? resolveName(norm(full)) : null;
+      out.push({ kind: "venta", d, est: norm(r[0]), t: norm(r[3]) || "SIN TIENDA", name: kf && kf !== IGN ? full : base, q: qq, ord: String(r[2] ?? "").trim(), row: i + 2, sh: "Ventas dic-2024 a feb-2025 (BYP NB)" }); });
+  }
+  return out;
 }
 /* 2025: solo para el cuadre "desde cero" o "conteo de 2025" y el historial de cada producto */
 async function load25(fresh){
@@ -1458,6 +1518,7 @@ async function load25(fresh){
       getValues(Y.inv, q("Stock de Productos") + "A2:D", fresh).catch(() => null)
     ]);
     const ven = v25.filter(s => s.d <= CUT.fin25).map(s => (s.sh = "Ventas 2025", s));
+    let v24 = []; try { v24 = await loadVentas24(fresh); } catch(e){ HIST.err24 = mcpErrText(e).t; }
     const cyr = []; parseCyr(cy, "Cambios 2025", cyr, 2025, 2);
     const may = [], mayN = [];
     parseMayor(m1, "Al mayor 2025 (MERCANCÍA)", may, 2025);
@@ -1472,8 +1533,8 @@ async function load25(fresh){
       for (const r of st){ const k = bySku.get(norm(r[0])) || resolveName(norm(r[1])); const d = parseDMY(r[2]); const qv = num(r[3]); if (k && k !== IGN && d && isFinite(qv) && !m[k]) m[k] = { q: qv, d }; }
       S.inicial25 = m;
     }
-    S.full25 = ven.concat(cyrOk, mayOk, mayNOk, ies);
-    HIST.stats25 = [statOf("Ventas 2025 (NEW DESPACHO CARACAS)", ven), statOf("Cambios 2025", cyrOk), statOf("Al mayor 2025 (MERCANCÍA, hasta 05/09)", mayOk), statOf("Al mayor 2025 (MERCANCIA - NUEVO, desde 06/09)", mayNOk), statOf("Ingresos/Egresos 2025", ies)];
+    S.full25 = v24.concat(ven, cyrOk, mayOk, mayNOk, ies);
+    HIST.stats25 = [statOf("Ventas oct-2024 a feb-2025 (solo Be You Pink y Nebula)", v24), statOf("Ventas 2025 (NEW DESPACHO CARACAS)", ven), statOf("Cambios 2025", cyrOk), statOf("Al mayor 2025 (MERCANCÍA, hasta 05/09)", mayOk), statOf("Al mayor 2025 (MERCANCIA - NUEVO, desde 06/09)", mayNOk), statOf("Ingresos/Egresos 2025", ies)];
     HIST.y25 = true;
     while (HIST.loading) await new Promise(r => setTimeout(r, 300));
     S.fullVentas = null; await loadHist(false);
@@ -1484,7 +1545,7 @@ let byKCache = { fv: null, av: -1, cat: null, map: new Map() };
 function histByK(){
   if (byKCache.fv === S.fullVentas && byKCache.av === S.aliasVer && byKCache.cat === S.catalog) return byKCache.map;
   const m = new Map();
-  for (const s of (S.fullVentas || [])){ const k = resolveName(norm(s.name)); if (!k || k === IGN) continue; let a = m.get(k); if (!a){ a = []; m.set(k, a); } a.push(s); }
+  for (const s of (S.fullVentas || [])){ const k = resolveName(norm(s.name)); if (!k || k === IGN) continue; for (const kk of kitKeys(k)){ let a = m.get(kk); if (!a){ a = []; m.set(kk, a); } a.push(s); } }
   byKCache = { fv: S.fullVentas, av: S.aliasVer, cat: S.catalog, map: m };
   return m;
 }
@@ -1498,38 +1559,58 @@ function outLabel(s){
   return "Egresos: " + (s.who || "sin origen");
 }
 function inLabel(s){ return s.kind === "cvuelve" ? "Cambios: lo que vuelve" : "Ingresos: " + (s.who || "sin origen"); }
-function cuaMode(){ return S.cfg.cuadreModo || "ini26"; }
-const MODE_TXT = { ini26: "conteo del 01/01/2026 (Excel inventario 2026)", ini25: "conteo de 2025 (Excel inventario 2025, cada producto con su fecha)", cero: "cero: todo lo anotado desde 2025" };
+/* Llegadas de 2025 anotadas después en la hoja de 2026 (el Excel de 2025 no las tenía, así que el stock inicial 01/01/2026 no las incluye): se suman al stock inicial */
+const isLate25 = s => s.kind === "ingreso" && !s.sh && s.d >= CUT.entradas25 && s.d <= CUT.fin25;
+/* Primer día con ventas anotadas (Excel de la administración anterior) */
+const DESDE0 = "2024-09-01";
+function cuaMode(){ return S.cfg.cuadreModo || "auto"; }
+const MODE_TXT = { auto: "la primera vez que llegó cada producto (si su primera llegada está anotada); los que ya existían antes de abril 2025 arrancan del stock inicial 01/01/2026", ini26: "conteo del 01/01/2026 (Excel inventario 2026)", ini25: "conteo de 2025 (Excel inventario 2025, cada producto con su fecha)", cero: "cero: todo lo anotado desde 2025" };
+/* Primera entrada y primera salida anotadas de un producto (2025 y 2026). Historia completa = con 2025 cargado, su primera entrada es posterior al 23/04/2025 y nada salió antes de esa entrada */
+function firstMoves(k, movs){
+  let firstIn = null, firstOut = null;
+  for (const s of movs){ const o = isOut(s), i = !o && isIn(s);
+    /* fechas anteriores a 2025 son errores de tipeo en las hojas: no cuentan como primera salida */
+    if (o && s.q > 0 && s.d >= DESDE0 && (!firstOut || s.d < firstOut)) firstOut = s.d;
+    if (i && s.kind === "ingreso" && (!firstIn || s.d < firstIn)) firstIn = s.d; }
+  for (const cm of S.compras){ if (isSalidaTipo(cm.tipo)) continue; for (const it of (cm.items || [])) if (it.k === k && (!firstIn || cm.fecha < firstIn)) firstIn = cm.fecha; }
+  /* El ingreso se anota a veces unos días después de que la mercancía ya se está vendiendo: se toleran 45 días */
+  const tol = firstIn ? isoOf(new Date(new Date(firstIn + "T12:00:00").getTime() - 45 * 864e5)) : null;
+  let completa = HIST.y25 ? !!firstIn && firstIn >= CUT.entradas25 && (!firstOut || tol <= firstOut) : null;
+  /* Decisión de la dueña producto por producto (26/11/2026): "a" = contar solo lo que llegó, "b" = partir del stock inicial 01/01/2026 */
+  const pk = S.byKey.get(k), dec = pk && pk.code && S.decis ? String(S.decis[pk.code] || "").toLowerCase() : "";
+  if (HIST.y25 && dec === "a") completa = true; else if (HIST.y25 && dec === "b") completa = false;
+  return { firstIn, firstOut, completa, dec };
+}
 function cuadreFor(k, byK){
   const c = S.calc.get(k); const base = c && c.base; if (!base) return null;
   const mode = cuaMode();
-  let ini = null, from = "2025-01-01";
-  if (mode === "ini26"){ ini = S.inicial ? (S.inicial[k] || null) : null; from = ini ? ini.d : "2026-01-01"; }
+  let ini = null, from = DESDE0;
+  const movs = (byK.get(k) || []).concat(c.sales.filter(s => s.kind !== "venta"));
+  const fm = firstMoves(k, movs);
+  if (mode === "auto"){ if (!fm.completa){ ini = S.inicial ? (S.inicial[k] || null) : null; from = ini ? ini.d : "2026-01-01"; } }
+  else if (mode === "ini26"){ ini = S.inicial ? (S.inicial[k] || null) : null; from = ini ? ini.d : "2026-01-01"; }
   else if (mode === "ini25"){ ini = S.inicial25 ? (S.inicial25[k] || null) : null; from = ini ? ini.d : "2025-01-01"; }
+  else if (mode === "cero") from = "2025-01-01";
   /* El conteo de partida vale ese día: los movimientos cuentan desde el día siguiente */
   const inRange = d => d <= base.d && (ini ? d > from : d >= from);
-  const ing = new Map(), sal = new Map(); let tin = 0, tout = 0, firstIn = null, firstOut = null;
+  const ing = new Map(), sal = new Map(); let tin = 0, tout = 0;
   const add = (m, l, q) => m.set(l, (m.get(l) || 0) + q);
-  const movs = (byK.get(k) || []).concat(c.sales.filter(s => s.kind !== "venta"));
   for (const s of movs){
     const o = isOut(s), i = !o && isIn(s);
-    if (o && s.q > 0 && (!firstOut || s.d < firstOut)) firstOut = s.d;
-    if (i && s.kind === "ingreso" && (!firstIn || s.d < firstIn)) firstIn = s.d;
-    if (!inRange(s.d)) continue;
+    const late = i && ini && mode !== "ini25" && !inRange(s.d) && isLate25(s) && s.d <= base.d;
+    if (!inRange(s.d) && !late) continue;
     if (o){ tout += s.q; add(sal, outLabel(s), s.q); }
-    else if (i){ tin += s.q; add(ing, inLabel(s), s.q); }
+    else if (i){ tin += s.q; add(ing, late ? "Llegadas de 2025 anotadas después (no estaban en el stock inicial)" : inLabel(s), s.q); }
   }
   for (const cm of S.compras) for (const it of (cm.items || [])){
     if (it.k !== k) continue;
     const q = +it.q || 0, sl = isSalidaTipo(cm.tipo);
-    if (!sl && (!firstIn || cm.fecha < firstIn)) firstIn = cm.fecha;
     if (!inRange(cm.fecha)) continue;
     if (sl){ tout += q; add(sal, TIPOS[cm.tipo] + " (app)", q); } else { tin += q; add(ing, "Entradas registradas en la app", q); }
   }
-  /* Historia completa: con 2025 cargado, su primera entrada es posterior al 23/04/2025 y nada salió antes de esa entrada */
-  const completa = HIST.y25 ? !!firstIn && firstIn >= CUT.entradas25 && (!firstOut || firstIn <= firstOut) : null;
+  const completa = fm.completa, firstIn = fm.firstIn;
   const start = ini ? ini.q : 0, calc = start + tin - tout;
-  return { k, c, base, ini, start, from, mode, tin, tout, calc, diff: base.q - calc, ing, sal, completa };
+  return { k, c, base, ini, start, from, mode, tin, tout, calc, diff: base.q - calc, ing, sal, completa, firstIn, dec: fm.dec, desdeLlegada: mode === "auto" && completa === true };
 }
 const cuaPill = r => Math.abs(r.diff) < 1e-9 ? '<span class="pill p-ok">Cuadra</span>' : (r.diff < 0 ? '<span class="pill p-revisar">Faltan ' + fmtN(-r.diff) + '</span>' : '<span class="pill p-comprar">Sobran ' + fmtN(r.diff) + '</span>');
 function renderCuadre(){
@@ -1544,7 +1625,7 @@ function renderCuadre(){
     const b = $("#cuaLoad"); if (b) b.onclick = () => loadHist(false);
     $("#cuaTable").innerHTML = ""; return;
   }
-  info.innerHTML = '<div class="note">Punto de partida: <b>' + MODE_TXT[mode] + '</b>. Se suma todo lo que entró y se resta todo lo que salió desde el día siguiente al punto de partida hasta el día del conteo. ' +
+  info.innerHTML = '<div class="note">Punto de partida: <b>' + MODE_TXT[mode] + '</b>. Se suma todo lo que entró y se resta todo lo que salió desde el día siguiente al punto de partida hasta el día del conteo. Las llegadas de 2025 (desde el 23/04/2025) que se anotaron después en la hoja de 2026 también se suman, porque el stock inicial no las tenía. ' +
     (need25 && !HIST.y25 ? (HIST.loading25 ? '<b>Leyendo 2025…</b> ' : (HIST.err25 ? '<span class="neg">' + esc(HIST.err25) + '</span> ' : '')) : '') +
     (mode === "cero" ? 'Ojo: no hay ventas del 11/02 al 31/03/2025 ni entradas antes del 23/04/2025, así que solo confía en los productos con historia completa. ' : '') +
     (S.unmatched.length ? ' Hay ' + S.unmatched.length + ' nombres de producto en las hojas que no están vinculados y no cuentan en el cuadre. <button class="btn sm" type="button" data-go="vincular">Vincularlos</button>' : '') + '</div>';
@@ -1564,7 +1645,7 @@ function renderCuadre(){
   const shown = list.slice(0, S.lim.cua);
   $("#cuaTable").innerHTML = '<p class="muted">' + list.length + ' productos · ' + ok + ' cuadran exacto</p><div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Contaste</th><th class="n">Partida</th><th class="n">+ Entradas</th><th class="n">− Salidas</th><th class="n">Debería haber</th><th>Resultado</th></tr></thead><tbody>' +
     shown.map(r => '<tr class="click" data-cua="' + esc(r.k) + '"><td><div class="pname">' + esc(r.c.p.desc) + '</div><div class="sku">' + esc(r.c.p.sku) + (S.ubic[r.k] ? ' · 📍 ' + esc(S.ubic[r.k]) : '') + '</div></td>' +
-      '<td class="n"><b>' + fmtN(r.base.q) + '</b><div class="sku">' + fmtD(r.base.d) + '</div></td><td class="n">' + (r.ini ? fmtN(r.ini.q) + '<div class="sku">' + fmtD(r.ini.d) + '</div>' : (r.mode === "cero" ? '0' : '<span class="muted" title="Sin stock inicial en el Excel: arranca en 0">0 *</span>')) + (r.completa ? '<div class="sku" style="color:var(--ok)">historia completa</div>' : '') + '</td>' +
+      '<td class="n"><b>' + fmtN(r.base.q) + '</b><div class="sku">' + fmtD(r.base.d) + '</div></td><td class="n">' + (r.ini ? fmtN(r.ini.q) + '<div class="sku">' + fmtD(r.ini.d) + '</div>' : (r.desdeLlegada ? '0<div class="sku">' + (r.firstIn ? '1ª llegada ' + fmtD(r.firstIn) : 'sin llegada anotada') + '</div>' : r.mode === "cero" ? '0' : '<span class="muted" title="Sin stock inicial en el Excel: arranca en 0">0 *</span>')) + (r.completa && !r.desdeLlegada ? '<div class="sku" style="color:var(--ok)">historia completa</div>' : '') + (r.firstIn && !r.desdeLlegada ? '<div class="sku">1ª llegada ' + fmtD(r.firstIn) + '</div>' : '') + (r.mode === "auto" && r.dec ? '<div class="sku">decidido: ' + (r.dec === "a" ? 'solo llegadas' : 'stock inicial') + '</div>' : '') + '</td>' +
       '<td class="n">' + fmtN(r.tin) + '</td><td class="n">' + fmtN(r.tout) + '</td><td class="n' + (r.calc < 0 ? ' neg' : '') + '">' + fmtN(r.calc) + '</td><td>' + cuaPill(r) + cuaWhy(r) + '</td></tr>').join("") +
     '</tbody></table></div>' + (list.length > shown.length ? '<button class="btn more" type="button" id="moreCua">Ver ' + Math.min(PAGE, list.length - shown.length) + ' más</button>' : '');
   const mb = $("#moreCua"); if (mb) mb.onclick = () => { S.lim.cua += PAGE; render(); };
@@ -1575,10 +1656,10 @@ document.addEventListener("click", e => {
   const lines = m => Array.from(m.entries()).sort((a, b) => b[1] - a[1]).map(([l, q]) => '<tr><td>' + esc(l) + '</td><td class="n">' + fmtN(q) + '</td></tr>').join("") || '<tr><td colspan="2" class="muted">Nada</td></tr>';
   const base = r.start + r.tin, pct = base > 0 ? Math.max(0, 100 - Math.abs(r.diff) / base * 100) : null;
   openDlg('<div class="row"><div><h2>' + esc(r.c.p.desc) + '</h2><div class="sku">' + esc(r.c.p.sku) + (S.ubic[r.k] ? ' · 📍 ' + esc(S.ubic[r.k]) : '') + '</div></div><span class="spacer"></span>' + cuaPill(r) + '</div>' +
-    '<div class="facts"><div class="fact"><span>Punto de partida</span><b>' + fmtN(r.start) + '</b><span>' + (r.ini ? 'conteo del ' + fmtD(r.ini.d) : (r.mode === "cero" ? 'desde cero' : 'sin stock inicial en el Excel')) + '</span></div><div class="fact"><span>+ Entradas</span><b>' + fmtN(r.tin) + '</b></div><div class="fact"><span>− Salidas</span><b>' + fmtN(r.tout) + '</b></div>' +
+    '<div class="facts"><div class="fact"><span>Punto de partida</span><b>' + fmtN(r.start) + '</b><span>' + (r.ini ? 'stock inicial del ' + fmtD(r.ini.d) : (r.desdeLlegada ? 'primera llegada ' + fmtD(r.firstIn) : r.mode === "cero" ? 'desde cero' : 'sin stock inicial en el Excel')) + '</span></div><div class="fact"><span>+ Entradas</span><b>' + fmtN(r.tin) + '</b></div><div class="fact"><span>− Salidas</span><b>' + fmtN(r.tout) + '</b></div>' +
     '<div class="fact"><span>Debería haber</span><b>' + fmtN(r.calc) + '</b><span>al ' + fmtD(r.base.d) + '</span></div><div class="fact"><span>Contaste</span><b>' + fmtN(r.base.q) + '</b><span>' + (r.base.parts && r.base.parts.length > 1 ? r.base.parts.map(x => fmtN(x.q) + ' en ' + esc(x.ubic || 'sin ubicación') + ' (' + fmtD(x.d) + ')').join(' + ') : fmtD(r.base.d)) + '</span></div>' + (pct !== null ? '<div class="fact"><span>Coincide</span><b>' + fmtN(pct, 1) + '%</b><span>de lo que entró</span></div>' : '') + '</div>' +
     '<div class="two"><div><h3>Entradas</h3><div class="tbl-wrap"><table><tbody>' + lines(r.ing) + '</tbody></table></div></div><div><h3>Salidas</h3><div class="tbl-wrap"><table><tbody>' + lines(r.sal) + '</tbody></table></div></div></div>' +
-    '<p class="note">Cuenta todo lo anotado ' + (r.ini ? 'desde el día siguiente al ' + fmtD(r.ini.d) : 'desde el ' + fmtD(r.from)) + ' hasta el día del conteo (' + fmtD(r.base.d) + '). Lo que salió después del conteo no entra en el cuadre.' + (r.completa === true ? ' Este producto tiene historia completa: su primera entrada fue después del 23/04/2025.' : (r.completa === false ? ' Este producto ya tenía movimientos antes de que se anotaran las entradas, así que "desde cero" no sirve para él.' : '')) + '</p>' +
+    '<p class="note">Cuenta todo lo anotado ' + (r.ini ? 'desde el día siguiente al ' + fmtD(r.ini.d) : (r.desdeLlegada ? 'desde su primera llegada (' + fmtD(r.firstIn) + ')' : 'desde el ' + fmtD(r.from))) + ' hasta el día del conteo (' + fmtD(r.base.d) + '). Lo que salió después del conteo no entra en el cuadre.' + (r.completa === true ? ' Este producto tiene historia completa: su primera entrada fue después del 23/04/2025.' : (r.completa === false ? ' Este producto ya existía antes de que se empezaran a anotar las entradas (23/04/2025) o no tiene ninguna entrada anotada, por eso arranca del stock inicial.' : '')) + '</p>' +
     '<div class="row"><button class="btn" type="button" id="cuaMov">Ver cada movimiento</button><span class="spacer"></span><button class="btn" type="button" data-close>Cerrar</button></div>');
   $("#cuaMov").onclick = () => { H.k = r.k; H.only = true; H.lim = 200; renderHistory(); };
 });
@@ -1606,6 +1687,8 @@ async function boot(){
       const v = d.data(); S.estadoExists[d.id] = true;
       if (d.id === "costos") S.costs = clean(v.map);
       else if (d.id === "alias"){ S.alias = clean(v.map, true); S.aliasVer = (S.aliasVer || 0) + 1; }
+      else if (d.id === "decisiones"){ S.decis = clean(v.map, true); S.aliasVer = (S.aliasVer || 0) + 1; }
+      else if (d.id === "kits"){ S.kits = clean(v.map, true); S.aliasVer = (S.aliasVer || 0) + 1; }
       else if (d.id === "ubicaciones") S.ubic = clean(v.map, true);
       else if (d.id === "extras"){ S.extras = clean(v.map, true); if (S.catChunks) rebuildCatalog(S.catChunks, S.catMetaRaw); }
       else if (d.id === "config") S.cfg = { ...DEF_CFG, ...v };
