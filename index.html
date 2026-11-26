@@ -52,7 +52,7 @@ h3{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spaci
 p{margin:0} .lead{color:var(--muted);max-width:68ch}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .spacer{flex:1}
-.grid-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.grid-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .kpi .lbl{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .kpi .num{font-size:28px;font-weight:800;font-stretch:112%;font-variant-numeric:tabular-nums;line-height:1.1}
@@ -60,6 +60,16 @@ p{margin:0} .lead{color:var(--muted);max-width:68ch}
 .kpi.crit .num{color:var(--crit)} .kpi.warn .num{color:var(--warn)}
 button.kpi{text-align:left;cursor:pointer;font:inherit;color:inherit}
 button.kpi:hover{border-color:var(--accent)}
+.quick{display:flex;flex-wrap:wrap;gap:8px}
+.quick .btn{padding:10px 14px;font-size:13.5px}
+.todo{display:flex;flex-direction:column}
+.todo .it{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.todo .it:first-child{border-top:0;padding-top:0}
+.todo .n{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.todo .n.crit{color:var(--crit)} .todo .n.warn{color:var(--warn)} .todo .n.ok{color:var(--ok)}
+.todo .t{font-weight:700} .todo .d{font-size:12.5px;color:var(--muted)}
+@media (max-width:520px){.todo .it{grid-template-columns:44px minmax(0,1fr)} .todo .it .btn{grid-column:2;justify-self:start}}
+.kpi .num.sm{font-size:22px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
 @media (max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
@@ -159,22 +169,51 @@ details summary{cursor:pointer;font-weight:600}
   <!-- RESUMEN -->
   <section class="view" data-view="resumen">
     <div id="setupBox"></div>
+    <div class="quick" aria-label="Accesos rápidos">
+      <button class="btn pri" type="button" data-go="comprar" data-filter="comprar">Qué comprar</button>
+      <button class="btn" type="button" data-go="conteo">Cargar un conteo</button>
+      <button class="btn" type="button" data-go="inventario">Ver todo el inventario</button>
+      <button class="btn" type="button" data-go="compras">Entradas y salidas</button>
+      <button class="btn" type="button" data-go="costos">Poner costos</button>
+      <button class="btn" type="button" id="qRefresh">Actualizar ventas</button>
+    </div>
     <div class="grid-kpi">
       <div class="kpi"><span class="lbl">Mercancía a costo</span><span class="num" id="kValor">—</span><span class="sub" id="kValorSub">Pon los costos para ver el valor</span></div>
       <button class="kpi crit" type="button" data-go="comprar" data-filter="urgente"><span class="lbl">Comprar urgente</span><span class="num" id="kUrg">—</span><span class="sub" id="kUrgSub">Se acaban antes de que llegue el pedido</span></button>
       <button class="kpi warn" type="button" data-go="comprar" data-filter="comprar"><span class="lbl">Por comprar</span><span class="num" id="kCom">—</span><span class="sub">No cubren el tiempo de entrega + cobertura</span></button>
       <button class="kpi" type="button" data-go="inventario" data-filter="sinconteo"><span class="lbl">Se venden sin conteo</span><span class="num" id="kSin">—</span><span class="sub">Cuenta estos primero</span></button>
     </div>
+    <div class="grid-kpi">
+      <div class="kpi"><span class="lbl">Unidades en el almacén</span><span class="num sm" id="kUnid">—</span><span class="sub" id="kUnidSub">Según los conteos y lo que entró y salió</span></div>
+      <div class="kpi"><span class="lbl" id="kDespLbl">Unidades despachadas</span><span class="num sm" id="kDesp">—</span><span class="sub" id="kDespSub">Todas las tiendas</span></div>
+      <button class="kpi" type="button" data-go="comprar" data-filter="comprar"><span class="lbl">Plata para el pedido</span><span class="num sm" id="kInv">—</span><span class="sub" id="kInvSub">Lo que cuesta comprar lo sugerido</span></button>
+      <button class="kpi" type="button" data-go="conteo"><span class="lbl">Último conteo</span><span class="num sm" id="kCont">—</span><span class="sub" id="kContSub">Carga un conteo</span></button>
+    </div>
     <div class="two">
       <div class="panel">
-        <div class="row"><h3>Lo más urgente</h3><span class="spacer"></span><button class="btn sm" type="button" data-go="comprar">Ver lista completa</button></div>
-        <div id="topBuy"></div>
+        <div class="row"><h3>Qué hacer hoy</h3></div>
+        <div class="todo" id="todoList"></div>
       </div>
       <div class="panel">
         <div class="row"><h3 id="hTiendas">Unidades despachadas por tienda</h3></div>
         <div class="bars" id="tiendaBars"></div>
         <p class="note">Cuenta ENTREGADO y MRW O ZOOM de tu hoja de Ventas, y las ventas al mayor de MERCANCIA - NUEVO. Cada tienda por separado.</p>
       </div>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="row"><h3>Lo más urgente de comprar</h3><span class="spacer"></span><button class="btn sm" type="button" data-go="comprar">Ver lista completa</button></div>
+        <div id="topBuy"></div>
+      </div>
+      <div class="panel">
+        <div class="row"><h3 id="hTopSell">Lo que más se vende</h3><span class="spacer"></span><button class="btn sm" type="button" data-go="inventario">Ver inventario</button></div>
+        <div id="topSell"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row"><h3>Mercancía parada</h3><span class="spacer"></span><span class="muted" id="deadSub"></span></div>
+      <p class="muted" id="deadLead">Productos que tienes en el almacén y no se han despachado en este período. Es plata quieta.</p>
+      <div id="deadList"></div>
     </div>
   </section>
 
@@ -924,9 +963,65 @@ function renderResumen(calcs, any){
     top.map(c => '<tr class="click" data-k="' + esc(c.p.k) + '"><td><div class="pname">' + esc(c.p.desc) + '</div><div class="sku">' + esc(c.p.sku) + '</div></td><td class="n' + (c.disp < 0 ? ' neg' : '') + '">' + fmtN(c.disp) + '</td><td class="n">' + diasTxt(c.dias) + '</td><td class="n"><b>' + fmtN(c.sug) + '</b></td></tr>').join("") + '</tbody></table></div>'
     : '<p class="muted">' + (S.conteos.length ? 'Nada urgente con los productos contados.' : 'Carga un conteo para ver qué comprar.') + '</p>';
   $("#hTiendas").textContent = "Unidades despachadas por tienda · últimos " + S.cfg.diasVentas + " días";
+  renderResumenExtra(calcs, any);
   const mx = S.stores.length ? S.stores[0][1] : 1;
   $("#tiendaBars").innerHTML = !S.sales ? '<p class="muted">Esperando las ventas…</p>' : S.stores.length ? S.stores.map(([t, q]) => '<div class="bar"><span>' + esc(t) + '</span><span class="track"><span class="fill" style="width:' + Math.max(2, q / mx * 100).toFixed(1) + '%"></span></span><span class="v">' + fmtN(q) + '</span></div>').join("") : '<p class="muted">Sin despachos en este período.</p>';
 }
+function renderResumenExtra(calcs, any){
+  const has = any && S.conteos.length;
+  let unid = 0, prods = 0, desp = 0, inv = 0, invMiss = 0;
+  for (const c of calcs){
+    if ((c.stock || 0) > 0){ unid += c.stock; prods++; }
+    if (isBuy(c) && c.sug > 0){ if (c.cost !== null) inv += c.sug * c.cost; else invMiss++; }
+  }
+  for (const st of S.stores) desp += st[1];
+  $("#kUnid").textContent = has ? fmtN(unid) : "—";
+  $("#kUnidSub").textContent = has ? "En " + fmtN(prods) + " productos distintos" : "Carga un conteo para saberlo";
+  $("#kDespLbl").textContent = "Despachado en " + S.cfg.diasVentas + " días";
+  $("#kDesp").textContent = S.sales ? fmtN(desp) : "—";
+  $("#kDespSub").textContent = S.sales ? "Unidades, en " + S.stores.length + " tiendas" : "Esperando las ventas";
+  $("#kInv").textContent = S.sales && has ? fmtUSD(inv) : "—";
+  $("#kInvSub").textContent = invMiss ? invMiss + " productos sin costo no están sumados" : "Lo que cuesta comprar lo sugerido";
+  let last = ""; for (const c of S.conteos) if ((c.fecha || "") > last) last = c.fecha;
+  const dd = last ? Math.round((new Date(today()) - new Date(last)) / 864e5) : null;
+  $("#kCont").textContent = last ? fmtD(last) : "—";
+  $("#kContSub").textContent = last ? (dd <= 0 ? "Hoy" : dd === 1 ? "Hace 1 día" : "Hace " + dd + " días") + " · " + S.conteos.length + " conteos cargados" : "Carga un conteo";
+  /* qué hacer hoy */
+  const urg = calcs.filter(c => c.st === "urgente" || c.st === "agotado").length;
+  const com = calcs.filter(c => c.st === "comprar").length;
+  const sin = calcs.filter(c => c.st === "sinconteo").length;
+  const noCost = calcs.filter(c => c.cost === null && ((c.stock || 0) > 0 || c.vel > 0)).length;
+  const unm = S.unmatched.length;
+  const it = (n, cls, t, d, go, f, lbl) => '<div class="it"><span class="n ' + (n ? cls : "ok") + '">' + (n ? fmtN(n) : "✓") + '</span><span><div class="t">' + esc(t) + '</div><div class="d">' + esc(d) + '</div></span>' +
+    (n ? '<button class="btn sm" type="button" data-go="' + go + '"' + (f ? ' data-filter="' + f + '"' : '') + '>' + esc(lbl) + '</button>' : '<span></span>') + '</div>';
+  const L = [];
+  if (S.sales){
+    L.push(it(urg, "crit", urg ? "Productos por comprar ya" : "Nada urgente que comprar", "Se acaban antes de que llegue un pedido (" + S.cfg.diasEntrega + " días).", "comprar", "urgente", "Ver cuáles"));
+    L.push(it(com, "warn", com ? "Productos por comprar pronto" : "Nada más por comprar", "Alcanzan para la entrega, pero no para los " + S.cfg.diasCobertura + " días de reserva.", "comprar", "comprar", "Ver cuáles"));
+    L.push(it(sin, "warn", sin ? "Se venden y no están contados" : "Todo lo que se vende está contado", "Sin conteo la app no sabe cuánto queda.", "inventario", "sinconteo", "Ver cuáles"));
+  }
+  L.push(it(noCost, "warn", noCost ? "Productos sin costo" : "Todos los productos tienen costo", "Sin costo no entran en el valor de la mercancía.", "costos", "", "Poner costos"));
+  L.push(it(unm, "warn", unm ? "Nombres sin vincular" : "Todos los nombres están vinculados", "Nombres de tus hojas que la app no reconoce y no cuentan.", "vincular", "", "Vincular"));
+  if (last && dd > 7) L.push(it(dd, "warn", "Días sin contar", "El último conteo es del " + fmtD(last) + ".", "conteo", "", "Cargar conteo"));
+  $("#todoList").innerHTML = L.join("");
+  /* más vendidos */
+  $("#hTopSell").textContent = "Lo que más se vende · últimos " + S.cfg.diasVentas + " días";
+  const sell = calcs.filter(c => c.vel > 0).sort((a, b) => b.vel - a.vel).slice(0, 8);
+  $("#topSell").innerHTML = !S.sales ? '<p class="muted">Esperando las ventas…</p>' : sell.length ? '<div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Vendido</th><th class="n">Queda</th><th class="n">Dura</th></tr></thead><tbody>' +
+    sell.map(c => '<tr class="click" data-k="' + esc(c.p.k) + '"><td><div class="pname">' + esc(c.p.desc) + '</div><div class="sku">' + esc(c.p.sku) + '</div></td><td class="n"><b>' + fmtN(c.vel) + '</b></td><td class="n' + ((c.disp ?? 0) < 0 ? ' neg' : '') + '">' + (c.disp === null ? '<span class="muted">sin contar</span>' : fmtN(c.disp)) + '</td><td class="n">' + diasTxt(c.dias) + '</td></tr>').join("") + '</tbody></table></div>'
+    : '<p class="muted">Sin despachos en este período.</p>';
+  /* mercancía parada */
+  const dead = S.sales ? calcs.filter(c => (c.stock || 0) > 0 && !(c.vel > 0)) : [];
+  let dv = 0; for (const c of dead) if (c.cost !== null) dv += c.val;
+  dead.sort((a, b) => ((b.cost !== null ? b.val : -1) - (a.cost !== null ? a.val : -1)) || (b.stock - a.stock));
+  $("#deadLead").textContent = "Productos que tienes en el almacén y no se han despachado en los últimos " + S.cfg.diasVentas + " días. Es plata quieta.";
+  $("#deadSub").textContent = S.sales && dead.length ? dead.length + " productos · " + fmtUSD(dv) + " a costo" : "";
+  $("#deadList").innerHTML = !S.sales ? '<p class="muted">Esperando las ventas…</p>' : dead.length ? '<div class="tbl-wrap"><table><thead><tr><th>Producto</th><th class="n">Unidades</th><th class="n">Costo c/u</th><th class="n">Valor</th></tr></thead><tbody>' +
+    dead.slice(0, 10).map(c => '<tr class="click" data-k="' + esc(c.p.k) + '"><td><div class="pname">' + esc(c.p.desc) + '</div><div class="sku">' + esc(c.p.sku) + '</div></td><td class="n">' + fmtN(c.stock) + '</td><td class="n">' + (c.cost !== null ? fmtUSD(c.cost) : '<span class="muted">sin costo</span>') + '</td><td class="n"><b>' + (c.cost !== null ? fmtUSD(c.val) : '—') + '</b></td></tr>').join("") + '</tbody></table></div>' +
+    (dead.length > 10 ? '<p class="muted">Se muestran los 10 de más valor.</p>' : '')
+    : '<p class="muted">' + (has ? 'Todo lo que tienes se está moviendo.' : 'Carga un conteo para verlo.') + '</p>';
+}
+$("#qRefresh").addEventListener("click", () => $("#btnRefresh").click());
 function diasTxt(d){ if (d === null || d === undefined) return "—"; if (d === Infinity) return "∞"; if (d <= 0) return "0 días"; return fmtN(Math.floor(d)) + " días"; }
 function buySort(a, b){ return (ST_RANK[a.st] - ST_RANK[b.st]) || ((a.dias ?? 1e9) - (b.dias ?? 1e9)) || (b.vel - a.vel); }
 
